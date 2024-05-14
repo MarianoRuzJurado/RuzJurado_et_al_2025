@@ -1,0 +1,283 @@
+---
+title: "NN Paper Final Script: Seurat preprocessing"
+author: "Mariano Ruz Jurado"
+date: "2024-05-14"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+#0. Load essential libraries
+```{r}
+#load libraries
+library(Seurat)
+library(tidyverse)
+library(svglite)
+library(ggplot2)
+library(ggpubr)
+library(openxlsx)
+source("/media/EOS_ZMM_shared/Bioinformatic/scRNA-SEQ-ZMM/Import10X-HelperFunctions_SeuratV3.R")
+source("/media/EOS_ZMM_shared/Bioinformatic/scRNA-SEQ-ZMM/Mariano_functions.R")
+outputFolder <- "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code"
+sink(file = paste0(outputFolder,"/NN_Paper_Script.log"), append = TRUE, split = TRUE)
+```
+
+#1. Preprocessing data (Integration of Human and Mice Data)
+
+##1.1 Import count matrixes from cellranger outputs
+```{r}
+#Human Hypertrophy HFrEF, HFpEF
+  Sample.Paths.human <- c(
+    #AS
+    "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Human/Hypertrophy(AS)/cellranger/103837-001-001/outs/filtered_feature_bc_matrix",
+    "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Human/Hypertrophy(AS)/cellranger/103837-001-002/outs/filtered_feature_bc_matrix",
+    "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Human/Hypertrophy(AS)/cellranger/103837-001-003/outs/filtered_feature_bc_matrix",
+    "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Human/Hypertrophy(AS)/cellranger/103837-001-004/outs/filtered_feature_bc_matrix",
+    "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Human/Hypertrophy(AS)/cellranger/103799-001-001//outs/filtered_feature_bc_matrix",
+    #HFpEF
+    "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Human/HFpEF/cellranger/104383-009-005/outs/filtered_feature_bc_matrix",
+    "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Human/HFpEF/cellranger/104383-009-006/outs/filtered_feature_bc_matrix",
+    #HFrEF
+    "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Human/ICM/cellranger/103837-001-005/outs/filtered_feature_bc_matrix",
+    "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Human/ICM/cellranger/104383-022/outs/filtered_feature_bc_matrix",
+    "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Human/ICM/cellranger/104383-009-004/outs/filtered_feature_bc_matrix"
+    )
+  Samplenames.human <- c("Human-AS-n2","Human-AS-n4","Human-AS-n5","Human-AS-n1","Human-AS-n3"
+                         ,"Human-HFpEF-n1","Human-HFpEF-n2"
+                         ,"Human-HFrEF-n1","Human-HFrEF-n2","Human-HFrEF-n3"
+                         )
+
+ #Mice ALL cellranger
+ Sample.Paths.mice <- c(
+   #AS
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/Hypertrophy(TAC)/cellranger/104383-009-001/outs/filtered_feature_bc_matrix",
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/Hypertrophy(TAC)/cellranger/104383-009-002/outs/filtered_feature_bc_matrix",
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/Hypertrophy(TAC)/cellranger/104383-009-003/outs/filtered_feature_bc_matrix",
+   #HFpEF
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/HFpEF/cellranger/104081-001-001/outs/filtered_feature_bc_matrix",
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/HFpEF/cellranger/104081-001-002/outs/filtered_feature_bc_matrix",
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/HFpEF/cellranger/104081-001-006/outs/filtered_feature_bc_matrix",
+   #HFrEF
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/HFrEF(ICM)/cellranger/104383-013-001/outs/filtered_feature_bc_matrix",
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/HFrEF(ICM)/cellranger/104383-013-002/outs/filtered_feature_bc_matrix",
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/HFrEF(ICM)/cellranger/104383-013-003/outs/filtered_feature_bc_matrix",
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/HFrEF(ICM)/cellranger/104383-013-004/outs/filtered_feature_bc_matrix",
+   #Ctrl
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/Control/cellranger/104081-001-003/outs/filtered_feature_bc_matrix",
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/Control/cellranger/104081-001-004/outs/filtered_feature_bc_matrix",
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/Control/cellranger/104081-001-005/outs/filtered_feature_bc_matrix",
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/Control/cellranger/E-MTAB-7869/old1/outs/filtered_feature_bc_matrix",
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/Control/cellranger/E-MTAB-7869/old2/outs/filtered_feature_bc_matrix",
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/Control/cellranger/E-MTAB-7869/old3/outs/filtered_feature_bc_matrix",
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/Control/cellranger/E-MTAB-7869/young1/outs/filtered_feature_bc_matrix",
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/Control/cellranger/E-MTAB-7869/young2/outs/filtered_feature_bc_matrix",
+   "/media/Helios_scStorage/David/HFrEF_HumanMice_Comparisson/Data/Mice/Control/cellranger/E-MTAB-7869/young3/outs/filtered_feature_bc_matrix"
+   )
+
+ Samplenames.mice <- c(
+                       "Mice-AS-n1","Mice-AS-n2","Mice-AS-n3"
+                       ,"Mice-HFpEF-n1","Mice-HFpEF-n2","Mice-HFpEF-n3"
+                       ,"Mice-HFrEF-n1","Mice-HFrEF-n2", "Mice-HFrEF-n3", "Mice-HFrEF-n4"
+                       ,"Mice-CTRL-n1","Mice-CTRL-n2","Mice-CTRL-n3","Mice-CTRL-n4","Mice-CTRL-n5"
+                       ,"Mice-CTRL-n6","Mice-CTRL-n7","Mice-CTRL-n8","Mice-CTRL-n9"
+                       )
+
+```
+
+##1.2 Run Importer function on Human Data
+```{r}
+outputFolder <- "/media/Helios_scStorage/Mariano/Human_Mice_Comparison/Human_Mice_Integrated"
+#import data, create SeuratObjects
+tmpList<-list()
+SeuratObjectList.human <- list()
+for (i in 1:length(Sample.Paths.human)) {
+  tmpList<-Importer(pathway = Sample.Paths.human[i],id = Samplenames.human[i], FilterCells = TRUE,FilterByAbsoluteValues = TRUE, performScaling = TRUE, minFeatures=300, maxFeatures=6000,minCounts=500,maxCounts=15000, maxMito=0.05)
+  print(tmpList[[2]])
+  SeuratObjectList.human[[i]]<-tmpList[[1]]
+}
+
+#mapping summary
+Mapping_Summary.List <- list()
+for (i in 1:length(Sample.Paths.human)) {
+Mapping_Summary.List[[i]] <- SummarizeMapping(pathway = Sample.Paths.human[i],id = Samplenames.human[i])
+}
+
+for (j in 2:length(Mapping_Summary.List)) {
+  Mapping_Summary.List[[1]][,j] <- Mapping_Summary.List[[j]]
+  mergeDF <- Mapping_Summary.List[[1]]
+}
+
+colnames(mergeDF) <- Samplenames.human
+write.xlsx(mergeDF, file =paste0(outputFolder,"/Human_mapping_summary.xlsx"),col.names = T,row.names = T)
+
+#clean up
+rm(tmpList)
+rm(mergeDF)
+rm(Mapping_Summary.List)
+```
+
+###1.2.1 Load in Human cell atlas Control heart left ventricle Seurat object and Control interventricular septum Seurat object
+```{r}
+#load LV human control object
+SeuratObject.human.combined.LV<- readRDS(file="/media/Helios_scStorage/Mariano/Human_Mice_Comparison/Human_Mice_Integrated/Seurat_and_R_objects/SeuratObject.combined.CTRL.LV.rds")
+#load SP human control object
+SeuratObject.human.combined.SP<- readRDS(file="/media/Helios_scStorage/Mariano/Human_Mice_Comparison/Human_Mice_Integrated/Seurat_and_R_objects/SeuratObject.combined.CTRL.SP.rds")
+
+#into list
+SeuratObjectList.human<-c(SeuratObjectList.human,SeuratObject.human.combined.LV,SeuratObject.human.combined.SP)
+
+#clean up
+rm(SeuratObject.human.combined.LV)
+rm(SeuratObject.human.combined.SP)
+
+```
+
+##1.3 Run Importer function on Mice Data
+```{r}
+outputFolder <- "/media/Helios_scStorage/Mariano/Human_Mice_Comparison/Human_Mice_Integrated"
+tmpList<-list()
+SeuratObjectList.mice <- list()
+for (i in 1:length(Sample.Paths.mice)) {
+  tmpList<-Importer(pathway = Sample.Paths.mice[i],id = Samplenames.mice[i], FilterCells = TRUE,FilterByAbsoluteValues = TRUE, performScaling = TRUE,minFeatures=300, maxFeatures=6000,minCounts=500,maxCounts=15000, maxMito=0.05)
+  print(tmpList[[2]])
+  SeuratObjectList.mice[[i]]<-tmpList[[1]]
+}
+
+#mapping summary
+Mapping_Summary.List <- list()
+for (i in 1:length(Sample.Paths.mice)) {
+Mapping_Summary.List[[i]] <- SummarizeMapping(pathway = Sample.Paths.mice[i],id = Samplenames.mice[i])
+}
+
+for (j in 2:length(Mapping_Summary.List)) {
+  Mapping_Summary.List[[1]][,j] <- Mapping_Summary.List[[j]]
+  mergeDF <- Mapping_Summary.List[[1]]
+}
+
+colnames(mergeDF) <- Samplenames.mice
+write.xlsx(mergeDF, file =paste0(outputFolder,"/Mice_mapping_summary.xls"), col.names = T,row.names = T)
+
+#clean up
+rm(tmpList)
+rm(mergeDF)
+rm(Mapping_Summary.List)
+```
+
+##1.4 Add disease and species information to the objects before integrating 
+```{r}
+#add species to human objects
+for (i in 1:length(Samplenames.human)) {
+  SeuratObjectList.human[[i]]$species <- "Human"
+}
+SeuratObjectList.human[[1]]$disease<-"Hypertrophy"
+SeuratObjectList.human[[2]]$disease<-"Hypertrophy"
+SeuratObjectList.human[[3]]$disease<-"Hypertrophy"
+SeuratObjectList.human[[4]]$disease<-"Hypertrophy"
+SeuratObjectList.human[[5]]$disease<-"Hypertrophy"
+SeuratObjectList.human[[6]]$disease<-"HFpEF"
+SeuratObjectList.human[[7]]$disease<-"HFpEF"
+SeuratObjectList.human[[8]]$disease<-"HFrEF"
+SeuratObjectList.human[[9]]$disease<-"HFrEF"
+SeuratObjectList.human[[10]]$disease<-"HFrEF"
+
+#add species to mice objects
+for (i in 1:length(Samplenames.mice)) {
+  SeuratObjectList.mice[[i]]$species <- "Mice"  
+}
+
+SeuratObjectList.mice[[1]]$disease<-"Hypertrophy"
+SeuratObjectList.mice[[2]]$disease<-"Hypertrophy"
+SeuratObjectList.mice[[3]]$disease<-"Hypertrophy"
+SeuratObjectList.mice[[4]]$disease<-"HFpEF"
+SeuratObjectList.mice[[5]]$disease<-"HFpEF"
+SeuratObjectList.mice[[6]]$disease<-"HFpEF"
+SeuratObjectList.mice[[7]]$disease<-"HFrEF"
+SeuratObjectList.mice[[8]]$disease<-"HFrEF"
+SeuratObjectList.mice[[9]]$disease<-"HFrEF"
+SeuratObjectList.mice[[10]]$disease<-"HFrEF"
+SeuratObjectList.mice[[11]]$disease<-"CTRL"
+SeuratObjectList.mice[[12]]$disease<-"CTRL"
+SeuratObjectList.mice[[13]]$disease<-"CTRL"
+SeuratObjectList.mice[[14]]$disease<-"CTRL"
+SeuratObjectList.mice[[15]]$disease<-"CTRL"
+SeuratObjectList.mice[[16]]$disease<-"CTRL"
+SeuratObjectList.mice[[17]]$disease<-"CTRL"
+SeuratObjectList.mice[[18]]$disease<-"CTRL"
+SeuratObjectList.mice[[19]]$disease<-"CTRL"
+
+```
+
+## 1.5 Apply thresholds from Human Healthy ATLAS on data
+```{r}
+#human
+for (i in 1:length(SeuratObjectList.human)) {
+  Object <- SeuratObjectList.human[[i]]
+  Object <- subset(Object, subset = percent.mito < 0.05 &
+                                          nFeature_RNA > 300 & nFeature_RNA < 6000 &
+                                          nCount_RNA > 500 & nCount_RNA <15000)
+  SeuratObjectList.human[[i]] <- Object
+}
+
+#mice
+for (i in 1:length(SeuratObjectList.mice)) {
+  Object <- SeuratObjectList.mice[[i]]
+  Object <- subset(Object, subset = percent.mito < 0.05 &
+                                          nFeature_RNA > 300 & nFeature_RNA < 6000 &
+                                          nCount_RNA > 500 & nCount_RNA <15000)
+  SeuratObjectList.mice[[i]] <- Object
+}
+
+#clean up
+rm(Object)
+```
+
+## 1.6 Build dataframe with orthologs across Human and Mice + subset and Integration
+```{r}
+library(OrthoIntegrate)
+
+# Build Orthologues using OrthoIntegrate algorithm
+Ortholog.DF <- BuildOrthologues(GTF.1 = "/opt/refdata-gex-GRCh38-2020-A/genes/genes.gtf",
+                                GTF.2 = "/opt/refdata-gex-mm10-2020-A/genes/genes.gtf",
+                                species.1 = "human",
+                                species.2 = "mouse")
+
+# Integrate across species using only 1 to 1 assigned genes
+SeuratObject.combined <- IntegrateObjects(OrthologueList = Ortholog.DF,
+                                          SeuratObjectList.species.1 = SeuratObjectList.human,
+                                          SeuratObjectList.species.2 = SeuratObjectList.mice,
+                                          species.1 = "human",
+                                          species.2 = "mouse")
+
+```
+
+##1.7 Scaling, PCA, UMAP, Clustering + Cell type annotation using CellTypist python package
+
+```{r}
+
+DefaultAssay(object = SeuratObject.combined) <- "integrated"
+# Run the standard workflow for visualization and clustering
+SeuratObject.combined <- ScaleData(object = SeuratObject.combined, verbose = FALSE)
+SeuratObject.combined <- RunPCA(object = SeuratObject.combined, npcs = 30, verbose = FALSE)
+# UMAP and Clustering
+SeuratObject.combined <- RunUMAP(object = SeuratObject.combined, reduction = "pca", dims = 1:10)
+SeuratObject.combined <- FindNeighbors(object = SeuratObject.combined, reduction = "pca", dims = 1:10)
+SeuratObject.combined <- FindClusters(SeuratObject.combined, resolution = 0.3)
+
+
+SeuratObject.combined.annotated <- DO.CellTypist(seuratObj = SeuratObject.combined,
+                                                 modelName = "Healthy_Adult_Heart.pkl",
+                                                 minCellsToRun = 200,
+                                                 runCelltypistUpdate = TRUE,
+                                                 over_clustering = "seurat_clusters",
+                                                 assay_normalized = "RNA")
+```
+
+
+#2. Load preprocessed Seurat Object
+
+```{r}
+#
+SeuratObject.combined.annotated <- readRDS(file = "/media/Helios_scStorage/Mariano/Human_Mice_Comparison/Human_Mice_Integrated/Seurat_and_R_objects/SeuratObject.combined.integrated.annotated_10_08_22.rds")
+
+```
+
