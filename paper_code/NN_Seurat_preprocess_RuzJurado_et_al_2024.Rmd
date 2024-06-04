@@ -296,11 +296,145 @@ Seu.Obj.annotated.M <- subset(Seu.Obj.annotated, subset = species == "Mice")
 p1 <- DimPlot(Seu.Obj.annotated.M, group.by = "cell_type", label = F, raster = F)
 ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/UMAPs/Annotation_manually_curated_mouse.png",plot=p1,width = 15, height = 15)
 
+# per orig.ident
+
+
+
+
 #saveRDS(SeuratObject.combined.annotated, file = "/media/Helios_scStorage/Mariano/Human_Mice_Comparison/Human_Mice_Integrated/Seurat_and_R_objects/SeuratObject.combined.integrated.annotated_10_08_22.rds")
 ```
 
+#2. Quality Control Figure (nCount, nFeatures, percent mitochondrial content per Sample)
+```{r}
+DefaultAssay(Seu.Obj.annotated) <- "RNA"
+Idents(Seu.Obj.annotated) <- "condition"
 
-#2. Find Markers per cell type
+#some re-assignments due to a typo made by object creation
+Seu.Obj.annotated$orig.ident <- plyr::revalue(Seu.Obj.annotated$orig.ident,
+                                              c(`Human_CTRLsp-n1` = "Human-CTRLsp-n1",
+                                                `Human_CTRLsp-n2` = "Human-CTRLsp-n2",
+                                                `Human_CTRLsp-n3` = "Human-CTRLsp-n3",
+                                                `Human_CTRLsp-n4` = "Human-CTRLsp-n4",
+                                                `Human_CTRLsp-n5` = "Human-CTRLsp-n5",
+                                                `Human_CTRLsp-n6` = "Human-CTRLsp-n6",
+                                                `Human_CTRLsp-n7` = "Human-CTRLsp-n7",
+                                                `Human_CTRLsp-n8` = "Human-CTRLsp-n8",
+                                                `Human_CTRLsp-n9` = "Human-CTRLsp-n9",
+                                                `Human_CTRLsp-n10` = "Human-CTRLsp-n10",
+                                                `Human_CTRLsp-n11` = "Human-CTRLsp-n11",
+                                                `Human_CTRLsp-n12` = "Human-CTRLsp-n12"))
+table(Seu.Obj.annotated$orig.ident)
+#Get  cell number counts for individual classes
+Seu.Obj.annotated$condition <- plyr::revalue(Seu.Obj.annotated$condition,
+                                                   c(`Human_CTRLsp` = "Human-CTRL",
+                                                     `Human-CTRLlv` = "Human-CTRL"))
+table(Seu.Obj.annotated$condition)
+
+# make quality plots for human and mice (nFeatures)
+
+for (spc in c("Human", "Mice")) {
+  Seu.Obj.annotated.sub <- subset(Seu.Obj.annotated, subset = species == spc)
+
+  df<-data.frame(orig.ident=setNames(Seu.Obj.annotated.sub[["orig.ident"]][,"orig.ident"], rownames(Seu.Obj.annotated.sub[["orig.ident"]])))
+  
+  #get expression values for genes from individual cells, add to df
+  df[,"nFeatures"] <- Seu.Obj.annotated.sub$nFeature_RNA
+  df.melt <- melt(df)
+  
+  ctrl_entries = grep("Human-CTRL", unique(df.melt$orig.ident),value = T)
+  rest_entries = unique(df.melt$orig.ident)[!unique(df.melt$orig.ident) %in% ctrl_entries]
+  
+  df.melt$orig.ident <- factor(df.melt$orig.ident, levels = c(ctrl_entries, rest_entries))
+  
+  plot_colors <- c(rep("#eeeeee", 53))
+  p <- ggplot(df.melt, aes(x = orig.ident, y = value))+ 
+    geom_violin(aes(fill = orig.ident), trim = T, scale = "width", size = 1)+
+    geom_boxplot(size = 0.40, width = 0.25, alpha = 0.5, color = "darkred", outlier.size = 0)+
+    labs(title = "Number of Features per sample", y = "nFeatures")+
+    xlab("")+
+    theme_light()+
+    theme(plot.title = element_text(face = "bold", color = "black", hjust = 0.5, size = 14),
+          axis.title.y = element_text(face = "bold", color = "black", size = 14),
+          axis.text.x = element_text(face = "bold", color = "black", angle = 45, hjust = 1, size = 14),
+          axis.text.y = element_text(face = "bold", color = "black", hjust = 1, size = 14),
+          legend.position = "none")+
+    scale_fill_manual(values = plot_colors)
+  p
+  ggsave(plot = p, filename = paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/quality_vlnplots/nFeature_vlnplot_",spc, ".pdf"), width = 12, height = 7)
+}
+
+# make quality plots for human and mice (nCounts)
+
+for (spc in c("Human", "Mice")) {
+  Seu.Obj.annotated.sub <- subset(Seu.Obj.annotated, subset = species == spc)
+
+  df<-data.frame(orig.ident=setNames(Seu.Obj.annotated.sub[["orig.ident"]][,"orig.ident"], rownames(Seu.Obj.annotated.sub[["orig.ident"]])))
+  
+  #get expression values for genes from individual cells, add to df
+  df[,"nCount"] <- Seu.Obj.annotated.sub$nCount_RNA
+  df.melt <- melt(df)
+  
+  ctrl_entries = grep("Human-CTRL", unique(df.melt$orig.ident),value = T)
+  rest_entries = unique(df.melt$orig.ident)[!unique(df.melt$orig.ident) %in% ctrl_entries]
+  
+  df.melt$orig.ident <- factor(df.melt$orig.ident, levels = c(ctrl_entries, rest_entries))
+  
+  plot_colors <- c(rep("#eeeeee", 53))
+  p <- ggplot(df.melt, aes(x = orig.ident, y = value))+ 
+    geom_violin(aes(fill = orig.ident), trim = T, scale = "width", size = 1)+
+    geom_boxplot(size = 0.40, width = 0.25, alpha = 0.5, color = "darkred", outlier.size = 0)+
+    labs(title = "Number of Counts per sample", y = "nCounts")+
+    xlab("")+
+    theme_light()+
+    theme(plot.title = element_text(face = "bold", color = "black", hjust = 0.5, size = 14),
+          axis.title.y = element_text(face = "bold", color = "black", size = 14),
+          axis.text.x = element_text(face = "bold", color = "black", angle = 45, hjust = 1, size = 14),
+          axis.text.y = element_text(face = "bold", color = "black", hjust = 1, size = 14),
+          legend.position = "none")+
+    scale_fill_manual(values = plot_colors)
+  p
+  ggsave(plot = p, filename = paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/quality_vlnplots/nCount_vlnplot_",spc, ".pdf"), width = 12, height = 7)
+}
+
+
+
+# make quality plots for human and mice (nCounts)
+
+for (spc in c("Human", "Mice")) {
+  Seu.Obj.annotated.sub <- subset(Seu.Obj.annotated, subset = species == spc)
+
+  df<-data.frame(orig.ident=setNames(Seu.Obj.annotated.sub[["orig.ident"]][,"orig.ident"], rownames(Seu.Obj.annotated.sub[["orig.ident"]])))
+  
+  #get expression values for genes from individual cells, add to df
+  df[,"percentmito"] <- Seu.Obj.annotated.sub$percent.mito
+  df.melt <- melt(df)
+  
+  ctrl_entries = grep("Human-CTRL", unique(df.melt$orig.ident),value = T)
+  rest_entries = unique(df.melt$orig.ident)[!unique(df.melt$orig.ident) %in% ctrl_entries]
+  
+  df.melt$orig.ident <- factor(df.melt$orig.ident, levels = c(ctrl_entries, rest_entries))
+  
+  plot_colors <- c(rep("#eeeeee", 53))
+  p <- ggplot(df.melt, aes(x = orig.ident, y = value))+ 
+    geom_violin(aes(fill = orig.ident), trim = T, scale = "width", size = 1)+
+    geom_boxplot(size = 0.40, width = 0.25, alpha = 0.5, color = "darkred", outlier.size = 0)+
+    labs(title = "Percentage of mitochondrial content per sample", y = "perc.mito")+
+    xlab("")+
+    theme_light()+
+    theme(plot.title = element_text(face = "bold", color = "black", hjust = 0.5, size = 14),
+          axis.title.y = element_text(face = "bold", color = "black", size = 14),
+          axis.text.x = element_text(face = "bold", color = "black", angle = 45, hjust = 1, size = 14),
+          axis.text.y = element_text(face = "bold", color = "black", hjust = 1, size = 14),
+          legend.position = "none")+
+    scale_fill_manual(values = plot_colors)
+  p
+  ggsave(plot = p, filename = paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/quality_vlnplots/percentmito_vlnplot_",spc, ".pdf"), width = 12, height = 7)
+}
+
+```
+
+
+#3. Find Markers per cell type
 
 ```{r}
 # load object
@@ -334,7 +468,7 @@ MT.genes <- top5[grep(pattern = "MT-", top5$gene),]
 tp5 <- top5[!(top5$gene %in% MT.genes$gene),]
 write.xlsx(tp5,file=paste0(outputFolder,"/excelsheets/markers_celtype/Mouse_tp5_markers_cell_annotation.xlsx"), colNames = T, rowNames = T)
 
-# Personally preference for scanpy's dotplot therefore convert to anndata for it and continue in scanyp_dotplot.py
+# Personally preference for scanpy's dotplot therefore convert to anndata for it and continue in scanpy_dotplot.py
 sce.Obj.annotated.H <- Seurat::as.SingleCellExperiment(Seu.Obj.annotated.H)
 zellkonverter::writeH5AD(sce.Obj.annotated.H, file = paste0(outputFolder,"/objects/adata.Obj.annotated.H.h5ad"), X_name = "logcounts")
 
@@ -343,17 +477,17 @@ zellkonverter::writeH5AD(sce.Obj.annotated.M, file = paste0(outputFolder,"/objec
 
 ```
 
-#3. Extracting normalized expression data for machine learning training for train, val data
+#4. Extracting normalized expression data for machine learning training for train, val data
 
 ```{r}
 Idents(Seu.Obj.annotated) <- "orig.ident"
 orig.ident <- levels(Idents(Seu.Obj.annotated))
 #get the subset obj
 Seu.Obj <- subset(Seu.Obj.annotated, idents = orig.ident[!orig.ident %in% c("Mice-AS-n2",
-                                                                  "Mice-HFpEF-n2",
+                                                                  "Mice-HFpEF-n1",
                                                                   "Mice-HFrEF-n2",
-                                                                  "Mice-CTRL-n2",
-                                                                  "Human-AS-n2",
+                                                                  "Mice-CTRL-n6",
+                                                                  "Human-AS-n4",
                                                                   "Human-HFpEF-n2",
                                                                   "Human-HFrEF-n2",
                                                                   "Human-CTRLlv-n2",
@@ -439,7 +573,7 @@ openxlsx::write.xlsx(df.val, file = "/media/Helios_scStorage/Mariano/NN_Human_Mi
 
 ```
 
-## 3.1 Shuffle randomly Data tables (Good practice for better training)
+## 4.1 Shuffle randomly Data tables (Good practice for better training)
 
 ```{r}
 #Load the data sets
@@ -529,18 +663,18 @@ write.table(shuffled_val_set, file = "/home/mariano/PycharmProjects/MLPGeneExpre
 write.csv(shuffled_val_labels, file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/RANDOMIZED_val_set_without_n2_samples_and_Mice_AS_Neuro_labels_p_20.csv", row.names = FALSE)
 ```
 
-##3.2 Extracting normalized expression data for machine learning training for test data
+##4.2 Extracting normalized expression data for machine learning training for test data
 
 ```{r}
 
-### Create n2 set for testing
+### Create set for testing, best quality samples
 Idents(Seu.Obj.annotated) <- "orig.ident"
 orig.ident <- levels(Idents(Seu.Obj.annotated))
 Seu.Obj.test <- subset(Seu.Obj.annotated, idents = orig.ident[orig.ident %in% c("Mice-AS-n2",
-                                                                  "Mice-HFpEF-n2",
+                                                                  "Mice-HFpEF-n1",  
                                                                   "Mice-HFrEF-n2",
-                                                                  "Mice-CTRL-n2",
-                                                                  "Human-AS-n2",
+                                                                  "Mice-CTRL-n6",
+                                                                  "Human-AS-n4", 
                                                                   "Human-HFpEF-n2",
                                                                   "Human-HFrEF-n2",
                                                                   "Human-CTRLlv-n2",
@@ -567,4 +701,5 @@ write.table(as.data.frame(dense.matrix), file = "/home/mariano/PycharmProjects/M
 
 write.csv(label_list, file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/test_set_only_n2_samples_labels.csv", row.names = FALSE)
 ```
+
 
