@@ -1,0 +1,126 @@
+---
+title: 'NN Paper Final Script: Predictors expression values'
+author: "Mariano Ruz Jurado"
+date: "2024-07-01"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+#0. Load essential libraries
+```{r}
+#load libraries
+library(Seurat)
+library(tidyverse)
+library(svglite)
+library(ggplot2)
+library(ggpubr)
+library(openxlsx)
+source("/media/EOS_ZMM_shared/Bioinformatic/scRNA-SEQ-ZMM/Import10X-HelperFunctions_SeuratV3.R")
+source("/media/EOS_ZMM_shared/Bioinformatic/scRNA-SEQ-ZMM/Mariano_functions.R")
+outputFolder <- "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code"
+sink(file = paste0(outputFolder,"/NN_Paper_Script.log"), append = TRUE, split = TRUE)
+```
+
+#1. Load Seurat object containing HF expression data
+```{r}
+# load object
+Seu.Obj.annotated <- readRDS(file = "/media/Helios_scStorage/Mariano/Human_Mice_Comparison/Human_Mice_Integrated/Seurat_and_R_objects/SeuratObject.combined.integrated.annotated_10_08_22.rds")
+DefaultAssay(object = Seu.Obj.annotated) <- "RNA"
+
+```
+
+#2. Bar plots for top predictors in species
+```{r}
+DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated,
+                          Feature = "MYH7",
+                          bar_colours = c("#1f77b4","#ea7e1eff"),
+                          group.by = "species",
+                          ctrl.condition = "Human",
+                          SeuV5 = F,
+                          stat_pos_mod = 1.05
+                          )
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/MYH7_species_barplot.pdf",
+       height = 5, width = 3)
+
+DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated,
+                          Feature = "MYH6",
+                          bar_colours = c("#1f77b4","#ea7e1eff"),
+                          group.by = "species",
+                          ctrl.condition = "Human",
+                          SeuV5 = F,
+                          stat_pos_mod = 1.05
+                          )
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/MYH6_species_barplot.pdf",
+       height = 5, width = 3)
+
+DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated,
+                          Feature = "AIRN",
+                          bar_colours = c("#1f77b4","#ea7e1eff"),
+                          group.by = "species",
+                          ctrl.condition = "Human",
+                          SeuV5 = F,
+                          stat_pos_mod = 1.05
+                          )
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/AIRN_species_barplot.pdf",
+       height = 5, width = 3)
+
+DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated,
+                          Feature = "PLCL1",
+                          bar_colours = c("#1f77b4","#ea7e1eff"),
+                          group.by = "species",
+                          ctrl.condition = "Human",
+                          SeuV5 = F,
+                          stat_pos_mod = 1.05
+                          )
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/CD36_species_barplot.pdf",
+       height = 5, width = 3)
+
+```
+
+#3. Bar plots for top predictors in CM
+
+```{r}
+#reannotate cell types to make comparison
+Seu.Obj.annotated$CM_other <- plyr::revalue(Seu.Obj.annotated$cell_type,
+                                             c(`Fibroblasts` = "Other",
+                                               `Endothelial` = "Other",
+                                               `Pericytes` = "Other",
+                                               `Immune.cells` = "Other",
+                                               `Smooth.Muscle` = "Other",
+                                               `Neuro` = "Other"))
+
+genes_of_interest <- c("FGF12","SGCD","ANKRD1","TTN","MLIP","PLCXD3","TENT5A","ADGRB3")
+for (gene in genes_of_interest) {
+  DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated,
+                            Feature = gene,
+                            group.by = "CM_other",
+                            ctrl.condition = "Cardiomyocytes",
+                            SeuV5 = F,
+                            stat_pos_mod = 1.03,
+                            wilcox_test = T,
+                            x_label_rotation = 0
+                            )
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/",gene,"_CM_barplot.pdf",
+       height = 6, width = 4))
+}
+```
+
+#. Bar plots for top predictors in HFpEF
+
+```{r}
+# to keep it simple
+Seu.Obj.annotated$disease <- plyr::revalue(Seu.Obj.annotated$disease,c(`CTRL.LV` = "CTRL",
+                                   `CTRL.SP` = "CTRL"))
+
+DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated,
+                          Feature = "GDA",
+                          group.by = "disease",
+                          ctrl.condition = "HFpEF",
+                          SeuV5 = F,
+                          stat_pos_mod = 1.05,
+                          wilcox_test = T
+                          )
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/FGF12_HFpEF_barplot.pdf",
+       height = 6, width = 5)
+```

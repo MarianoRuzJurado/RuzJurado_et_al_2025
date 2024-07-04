@@ -297,9 +297,37 @@ p1 <- DimPlot(Seu.Obj.annotated.M, group.by = "cell_type", label = F, raster = F
 ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/UMAPs/Annotation_manually_curated_mouse.png",plot=p1,width = 15, height = 15)
 
 # per orig.ident
+#UMAPs by species 
+p1 <- DimPlot(Seu.Obj.annotated, reduction = "umap", group.by = "species", pt.size = 0.01, label = F, raster = F, cols = c("#1f77b4","#ff7f0e"))
+#set alpha values for better visuals
+p1[[1]]$layers[[1]]$aes_params$alpha = ifelse ( Seu.Obj.annotated@meta.data$species == "Mice", 1, .4)
+p1 <- p1 + theme(legend.position = "none")+
+  ggtitle("")+
+  xlab("")+
+  ylab("")
+p1
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/UMAPs/UMAP_per_sample.png",plot=p1,width = 15, height = 15)
 
 
+#For celltypist annotation
+#Human
+Seu.Obj.annotated.H <- subset(Seu.Obj.annotated, subset = species == "Human")
+p1 <- DimPlot(Seu.Obj.annotated.H, group.by = "predicted_labels_celltypist", label = F, raster = F)
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/UMAPs/Annotation_celltypist_human.png",plot=p1,width = 15, height = 15)
+#Mouse
+Seu.Obj.annotated.M <- subset(Seu.Obj.annotated, subset = species == "Mice")
+p1 <- DimPlot(Seu.Obj.annotated.M, group.by = "predicted_labels_celltypist", label = F, raster = F)
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/UMAPs/Annotation_celltypist_mouse.png",plot=p1,width = 15, height = 15)
 
+#For unsupervised clustering
+#Human
+Seu.Obj.annotated.H <- subset(Seu.Obj.annotated, subset = species == "Human")
+p1 <- DimPlot(Seu.Obj.annotated.H, group.by = "seurat_clusters", label = F, raster = F)
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/UMAPs/Unsupervised_clustering_human.png",plot=p1,width = 15, height = 15)
+#Mouse
+Seu.Obj.annotated.M <- subset(Seu.Obj.annotated, subset = species == "Mice")
+p1 <- DimPlot(Seu.Obj.annotated.M, group.by = "seurat_clusters", label = F, raster = F)
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/UMAPs/Unsupervised_clustering_mouse.png",plot=p1,width = 15, height = 15)
 
 #saveRDS(SeuratObject.combined.annotated, file = "/media/Helios_scStorage/Mariano/Human_Mice_Comparison/Human_Mice_Integrated/Seurat_and_R_objects/SeuratObject.combined.integrated.annotated_10_08_22.rds")
 ```
