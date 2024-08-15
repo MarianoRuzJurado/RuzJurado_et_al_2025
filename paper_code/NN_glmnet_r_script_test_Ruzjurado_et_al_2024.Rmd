@@ -1,0 +1,190 @@
+---
+title: "NN Paper Final Script: Logistic regression model on training data"
+author: "Mariano Ruz Jurado"
+date: "2024-08-14"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(glmnet)
+library(data.table)
+library(tidyverse)
+
+# Load toy example data
+train_data <- fread('/media/Storage/R/SHAP/RANDOMIZED_train_set_without_Mice_AS_Neuro_p_80.csv')
+train_data <- column_to_rownames(train_data, var = "V1")
+train_label <- fread('/media/Storage/R/SHAP/RANDOMIZED_train_set_without_Mice_AS_Neuro_labels_p_80.csv')
+
+# Convert the label to a factor for classification
+train_label <- as.factor(train_label$`train_labels[shuffled_numbers, ]`)
+
+toy_train <- train_data[1:50000,]
+toy_label <- train_label[1:50000]
+toy_label <- as.vector(toy_label)
+
+rownames(toy_train) <- NULL
+colnames(toy_train) <- NULL
+toy_train <- as.matrix(toy_train)
+toy_train <- as(toy_train, "sparseMatrix")
+toy_label <- as.numeric(factor(toy_label))
+
+dim(toy_train)
+length(toy_label)
+table(toy_label)
+
+# Standardize the features and fit the model
+model <- glmnet(
+  x = toy_train,  # Input features
+  y = toy_label,             # Target labels
+  family = "multinomial",            # Specify multinomial logistic regression
+  alpha = 0.5,                       # Elastic net mixing parameter (0 = l2, 1 = l1)
+  lambda = 0.1,                      # Regularization strength (use cross-validation to determine)
+  standardize = F                 # Standardize features
+)
+
+# Display the model summary
+print(model)
+
+#Try the test data set
+test_data <- fread('/media/Helios_scStorage/Mariano/NN_Human_Mice/whole_matrix_Seurat_extract/240519_test_set.csv') 
+test_data <- column_to_rownames(test_data, var = "V1")
+
+rownames(test_data) <- NULL
+colnames(test_data) <- NULL
+test_data <- as.matrix(test_data)
+test_data <- as(test_data, "sparseMatrix")
+
+y_test_predict <- predict(model, test_data, type = "class")
+```
+
+#Toy run worked,so know with all training data
+```{r}
+library(glmnet)
+library(data.table)
+library(tidyverse)
+
+# Load toy example data
+train_data <- fread('/media/Storage/R/SHAP/RANDOMIZED_train_set_without_Mice_AS_Neuro_p_80.csv')
+train_data <- column_to_rownames(train_data, var = "V1")
+train_label <- fread('/media/Storage/R/SHAP/RANDOMIZED_train_set_without_Mice_AS_Neuro_labels_p_80.csv')
+ 
+# label to a factor for classification
+train_label <- as.factor(train_label$`train_labels[shuffled_numbers, ]`)
+train_label <- as.vector(train_label)
+
+rownames(train_data) <- NULL
+colnames(train_data) <- NULL
+train_data <- as.matrix(train_data)
+train_data <- as(train_data, "sparseMatrix")
+train_label <- as.numeric(factor(train_label))
+
+dim(train_data)
+length(train_label)
+table(train_label)
+
+# Standardize the features and fit the model
+model <- glmnet(
+  x = train_data,  # Input features
+  y = train_label,             # Target labels
+  family = "multinomial",            # Specify multinomial logistic regression
+  alpha = 0.5,                       # Elastic net mixing parameter (0 = l2, 1 = l1)
+  lambda = 0.1,                      # Regularization strength, I assume now 0.1 as a default
+  standardize = F                 # Standardize features
+)
+
+# Display the model summary
+print(model)
+
+#Try the test data set
+test_data <- fread('/media/Helios_scStorage/Mariano/NN_Human_Mice/whole_matrix_Seurat_extract/240519_test_set.csv') 
+test_data <- column_to_rownames(test_data, var = "V1")
+
+rownames(test_data) <- NULL
+colnames(test_data) <- NULL
+test_data <- as.matrix(test_data)
+test_data <- as(test_data, "sparseMatrix")
+
+y_test_predict <- predict(model, test_data, type = "class")
+
+#Re-assign original label
+train_label <- fread('/media/Storage/R/SHAP/RANDOMIZED_train_set_without_Mice_AS_Neuro_labels_p_80.csv')
+train_label <- as.factor(train_label$`train_labels[shuffled_numbers, ]`)
+classes <- levels(factor(train_label))
+y_test_predict_read <- classes[as.numeric(y_test_predict)]
+
+# Redefine the one hot encoded representation
+test_labels = c('Human', 'Mice',
+               'Cardiomyocytes', 'Endothelial', 'Fibroblasts', 'Immune.cells', 'Neuro', 'Pericytes',
+               'Smooth.Muscle',
+               'AS', 'HFpEF', 'HFrEF', 'CTRL') # Assumption of same order in ground truth as always
+one_hot_matrix <- matrix(0, nrow = length(y_test_predict_read), ncol = length(test_labels))
+
+# Assign column names to the one-hot matrix
+colnames(one_hot_matrix) <- test_labels
+
+# Fill the matrix with 1s where appropriate
+for (i in 1:length(y_test_predict_read)) {
+  label <- y_test_predict_read[i]
+  
+  # Check for each category in the test_labels
+  for (j in 1:length(test_labels)) {
+    if (grepl(test_labels[j], label)) {
+      one_hot_matrix[i, j] <- 1
+    }
+  }
+}
+
+# Convert to a data frame for easier viewing
+one_hot_df <- as.data.frame(one_hot_matrix)
+
+write.csv(one_hot_df, "/media/Helios_scStorage/Mariano/NN_Human_Mice/multinomial_logistic_regression_model/new_run/one_hot_encoded_predictions_test_data_LR_multinomial.csv", row.names = F)
+
+saveRDS(model, "/media/Helios_scStorage/Mariano/NN_Human_Mice/multinomial_logistic_regression_model/new_run/glmnet_models/Multinomial_LR_whole_train_data_model.Rds")
+
+
+
+#Some tinkering
+# load in one-hot encoded labels
+train_label_bin <- fread('/media/Helios_scStorage/Mariano/NN_Human_Mice/f1_loss_runs_24_06_18/train_labels_bin.csv')
+val_label_bin <- fread('/media/Helios_scStorage/Mariano/NN_Human_Mice/f1_loss_runs_24_06_18/val_labels_bin.csv')
+
+toy_train <- train_data[1:50000,]
+rownames(toy_train) <- NULL
+colnames(toy_train) <- NULL
+toy_train <- as.matrix(toy_train)
+toy_train <- as(toy_train, "sparseMatrix")
+
+toy_train_label <- as.data.frame(train_label_bin[1:50000,])
+
+
+# Train a binary logistc regression model for each class
+models <- list()
+for (i in 1:ncol(toy_train_label)) {
+  y_label <- as.numeric(toy_train_label[, i])
+  
+  # Fit the glmnet model for this class
+  model <- glmnet(
+    x = as.matrix(toy_train),  # Input features
+    y = y_label,               # Target labels (for the current class)
+    family = "binomial",       # Binomial logistic regression
+    alpha = 0.5,               # Elastic net mixing parameter (0 = l2, 1 = l1)
+    standardize = F         # Standardize features
+  )
+  
+  models[[i]] <- model
+}
+
+
+for (i in 1:ncol(toy_train_label)) {
+  # Predict probabilities for the current class
+  predictions[, i] <- predict(models[[i]], newx = as.matrix(toy_train), type = "response")
+}
+
+print(predictions_df)
+
+
+
+```
+

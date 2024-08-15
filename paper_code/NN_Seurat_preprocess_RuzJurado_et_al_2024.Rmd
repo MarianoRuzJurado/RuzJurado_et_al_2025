@@ -725,9 +725,259 @@ dense.matrix <- t(dense.matrix)
 label_list <- paste(Seu.Obj.test@meta.data$condition, Seu.Obj.test@meta.data$cell_type, sep = "_")
 
 # Save the test set
-write.table(as.data.frame(dense.matrix), file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/test_set_only_n2_samples.csv", sep = ",", col.names = T, row.names = T)
+write.table(as.data.frame(dense.matrix), file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/240519_test_set.csv", sep = ",", col.names = T, row.names = T)
 
-write.csv(label_list, file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/test_set_only_n2_samples_labels.csv", row.names = FALSE)
+write.csv(label_list, file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/240519_test_set_labels_labels.csv", row.names = FALSE)
 ```
 
+##4.3 Extracting normalized expression data for SHAP value calculation (use HFpEF n1, n2 too small...)
+
+```{r}
+Idents(Seu.Obj.annotated) <- "orig.ident"
+orig.ident <- levels(Idents(Seu.Obj.annotated))
+Seu.Obj.SHAP <- subset(Seu.Obj.annotated, idents = orig.ident[orig.ident %in% c("Mice-AS-n2",
+                                                                  "Mice-HFpEF-n1",  
+                                                                  "Mice-HFrEF-n2",
+                                                                  "Mice-CTRL-n6",
+                                                                  "Human-AS-n4", 
+                                                                  "Human-HFpEF-n1",
+                                                                  "Human-HFrEF-n2",
+                                                                  "Human-CTRLlv-n2",
+                                                                  "Human_CTRLsp-n2")])
+
+#rename every Human-CTRL(sp,lv) Human-CTRL
+Idents(Seu.Obj.SHAP) <- "condition"
+Seu.Obj.SHAP$condition <- plyr::revalue(Seu.Obj.SHAP$condition,c(`Human_CTRLsp` = "Human-CTRL",
+                                   `Human-CTRLlv` = "Human-CTRL"))
+
+#remove AS Neuros from mice, there are too less cells to train
+remove.barcodes <- rownames(Seu.Obj.SHAP@meta.data[Seu.Obj.SHAP@meta.data$condition == "Mice-AS" & Seu.Obj.SHAP@meta.data$cell_type == "Neuro",])
+Seu.Obj.SHAP <- subset(Seu.Obj.SHAP, cells = remove.barcodes, invert = TRUE)
+
+meta.data <- Seu.Obj.SHAP@meta.data
+sparse.matrix <- Seu.Obj.SHAP@assays$RNA@data
+dense.matrix <- as.matrix(sparse.matrix)
+dense.matrix <- t(dense.matrix)
+
+label_list <- paste(Seu.Obj.SHAP@meta.data$condition, Seu.Obj.SHAP@meta.data$cell_type, sep = "_")
+
+# Save the test set
+write.table(as.data.frame(dense.matrix), file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/240716_SHAP_set.csv", sep = ",", col.names = T, row.names = T)
+
+write.csv(label_list, file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/240716_SHAP_set_labels_labels.csv", row.names = FALSE)
+
+```
+
+
+#5. Extracting Human only expression matrix for re-training model on human data only
+
+```{r}
+Seu.Obj.annotated.H <- readRDS(file = "/media/Helios_scStorage/Mariano/Human_Mice_Comparison/Seurat_and_R_objects/SeuratObject_Human_AS_HFpEF_HFrEF_Ctrl_Annotated_20_10_22.rds")
+DefaultAssay(object = Seu.Obj.annotated.H) <- "RNA"
+
+Idents(Seu.Obj.annotated.H) <- "orig.ident"
+orig.ident <- levels(Idents(Seu.Obj.annotated.H))
+#get the subset obj
+Seu.Obj.H <- subset(Seu.Obj.annotated.H, idents = orig.ident[!orig.ident %in% c("Human-AS-n4",
+                                                                  "Human-HFpEF-n2",
+                                                                  "Human-HFrEF-n2",
+                                                                  "Human-CTRLlv-n2",
+                                                                  "Human_CTRLsp-n2")])
+#rename every Human-CTRL(sp,lv) to Human-CTRL
+Idents(Seu.Obj.H) <- "condition"
+Seu.Obj.H$condition <- plyr::revalue(Seu.Obj.H$condition,
+                                                   c(`Human_CTRLsp` = "Human-CTRL",
+                                                     `Human-CTRLlv` = "Human-CTRL"))
+
+
+meta.data <- Seu.Obj.H@meta.data
+sparse.matrix <- Seu.Obj.H@assays$RNA@data
+dense.matrix <- as.matrix(sparse.matrix)
+dense.matrix <- t(dense.matrix)
+
+
+#Create stratified Training and Testing set
+library(caret)
+
+label_list <- paste(Seu.Obj.H@meta.data$condition,
+                    Seu.Obj.H@meta.data$cell_type, sep = "_")
+
+
+
+# Create a stratified partition of the data
+set.seed(123)  # for reproducibility
+trainIndex <- createDataPartition(label_list, p = 0.80, list = FALSE)
+
+# Split the data into training and test sets
+train_set <- dense.matrix[trainIndex,]
+val_set <- dense.matrix[-trainIndex,]
+
+# Save the training set
+write.table(as.data.frame(train_set), file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/Human_only/Human_train_set_p_80.csv", sep = ",", col.names = T, row.names = T)
+
+
+#Save val matrix Matrix
+write.table(as.data.frame(val_set), file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/Human_only/Human_val_set_p_20.csv", sep = ",", col.names = T, row.names = T)
+
+
+
+# create a list of labels for training data, save as csv for python import
+
+label_list.train <- character()
+pb = txtProgressBar(min = 0, max = length(rownames(train_set)), initial = 0)
+for (i in 1:length(rownames(train_set))){
+    setTxtProgressBar(pb, i)
+    barcode <- rownames(train_set)[i]
+    condition <- Seu.Obj.H@meta.data[barcode,]$condition
+    cell_type <- Seu.Obj.H@meta.data[barcode,]$cell_type
+    label_list.train[i] <- paste0(condition,"_",cell_type)
+}
+close(pb)
+
+write.csv(label_list.train, file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/Human_only/Human_train_set_labels_p_80.csv", row.names = FALSE)
+
+# Write Ground Truth Training barcode, label
+df.train <- data.frame(barcodes=rownames(train_set),label_list.train)
+openxlsx::write.xlsx(df.train, file = "/media/Helios_scStorage/Mariano/NN_Human_Mice/label_distribution/Human_Ground_Truth_DF_Training.xlsx")
+
+#create a list of labels for my training data, save as csv for python import
+
+label_list.val <- character()
+pb = txtProgressBar(min = 0, max = length(rownames(val_set)), initial = 0)
+for (i in 1:length(rownames(val_set))){
+    setTxtProgressBar(pb, i)
+    barcode <- rownames(val_set)[i]
+    condition <- Seu.Obj.H@meta.data[barcode,]$condition
+    cell_type <- Seu.Obj.H@meta.data[barcode,]$cell_type
+    label_list.val[i] <- paste0(condition,"_",cell_type)
+}
+close(pb)
+
+write.csv(label_list.val, file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/Human_only/Human_val_set_labels_p_20.csv", row.names = FALSE)
+
+#Write Ground Truth val barcode, label
+df.val <- data.frame(barcodes=rownames(val_set),label_list.val)
+openxlsx::write.xlsx(df.val, file = "/media/Helios_scStorage/Mariano/NN_Human_Mice/label_distribution/Human_Ground_Truth_DF_Val.xlsx")
+
+```
+
+## 5.1 Shuffle Human Data tables (Good practice for better training)
+
+```{r}
+#Load the data sets
+train_set <- read.delim(file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/Human_only/Human_train_set_p_80.csv", header= TRUE, sep = ",")
+val_set <- read.delim(file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/Human_only/Human_val_set_p_20.csv", header= TRUE, sep = ",")
+
+#Load the labels
+train_labels <- read.delim(file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/Human_only/Human_train_set_labels_p_80.csv", sep = ",")
+val_labels <- read.delim(file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/Human_only/Human_val_set_labels_p_20.csv", sep = ",")
+
+
+#Create randomness in data
+set.seed(123) # reproducibility
+shuffled_numbers <- sample(nrow(train_set))
+
+#shuffle the frame and labels
+shuffled_train_set <- train_set[shuffled_numbers,]
+shuffled_train_labels <- as.data.frame(train_labels[shuffled_numbers,])
+
+#check if labels are still correctly assigned, lets check 6 random rows
+random_rows <- c(rownames(shuffled_train_set)[1],
+  rownames(shuffled_train_set)[11],
+  rownames(shuffled_train_set)[111],
+  rownames(shuffled_train_set)[1111],
+  rownames(shuffled_train_set)[11111],
+  rownames(shuffled_train_set)[111111])
+
+#Check if label correct
+for (rwnm in random_rows) {
+  nbr <- which(rownames(shuffled_train_set) == rwnm)
+  label_name <- shuffled_train_labels[nbr,]
+  nbr_truth <- which(rownames(train_set) == rwnm)
+  truth_label_name <- train_labels[nbr_truth,]
+  
+  if (label_name == truth_label_name) {
+    print(paste0(label_name, " is identical to ", truth_label_name, ", labels identical for the selected random row"))
+  }
+  
+  if (label_name != truth_label_name) {
+    print(paste0(label_name, " is NOT identical to ", truth_label_name, ", labels NOT identical for the selected random row"))
+  }
+}
+
+#if everything is fine save as randomized sample set
+write.table(shuffled_train_set, file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/Human_only/RANDOMIZED_HUMAN_train_set_p_80.csv", sep = ",", col.names = T, row.names = T)
+
+write.csv(shuffled_train_labels, file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/Human_only/RANDOMIZED_HUMAN_train_set_labels_p_80.csv", row.names = FALSE)
+
+
+#Now repeat for validation data set
+
+#Create randomness in data
+set.seed(123) # reproducibility
+shuffled_numbers <- sample(nrow(val_set))
+
+#shuffle the frame and labels
+shuffled_val_set <- val_set[shuffled_numbers,]
+shuffled_val_labels <- as.data.frame(val_labels[shuffled_numbers,])
+
+#check if labels are still correctly assigned, lets check 6 random rows
+random_rows <- c(rownames(shuffled_val_set)[1],
+  rownames(shuffled_val_set)[11],
+  rownames(shuffled_val_set)[111],
+  rownames(shuffled_val_set)[1111],
+  rownames(shuffled_val_set)[11111],
+  rownames(shuffled_val_set)[36135])
+
+#Check if label correct
+for (rwnm in random_rows) {
+  nbr <- which(rownames(shuffled_val_set) == rwnm)
+  label_name <- shuffled_val_labels[nbr,]
+  nbr_truth <- which(rownames(val_set) == rwnm)
+  truth_label_name <- val_labels[nbr_truth,]
+  
+  if (label_name == truth_label_name) {
+    print(paste0(label_name, " is identical to ", truth_label_name, ", labels identical for the selected random row"))
+  }
+  
+  if (label_name != truth_label_name) {
+    print(paste0(label_name, " is NOT identical to ", truth_label_name, ", labels NOT identical for the selected random row"))
+  }
+}
+
+#if everything is fine save as randomized sample set
+write.table(shuffled_val_set, file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/Human_only/RANDOMIZED_HUMAN_val_set_p_20.csv", sep = ",", col.names = T, row.names = T)
+
+write.csv(shuffled_val_labels, file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/Human_only/RANDOMIZED_HUMAN_val_set_labels_p_20.csv", row.names = FALSE)
+```
+
+##5.2 Extracting normalized expression data for machine learning training for HUMAN test data
+```{r}
+Idents(Seu.Obj.annotated.H) <- "orig.ident"
+orig.ident <- levels(Idents(Seu.Obj.annotated.H))
+#get the subset obj
+Seu.Obj.H <- subset(Seu.Obj.annotated.H, idents = orig.ident[orig.ident %in% c("Human-AS-n4",
+                                                                  "Human-HFpEF-n2",
+                                                                  "Human-HFrEF-n2",
+                                                                  "Human-CTRLlv-n2",
+                                                                  "Human_CTRLsp-n2")])
+#rename every Human-CTRL(sp,lv) to Human-CTRL
+Idents(Seu.Obj.H) <- "condition"
+Seu.Obj.H$condition <- plyr::revalue(Seu.Obj.H$condition,
+                                                   c(`Human_CTRLsp` = "Human-CTRL",
+                                                     `Human-CTRLlv` = "Human-CTRL"))
+
+
+meta.data <- Seu.Obj.H@meta.data
+sparse.matrix <- Seu.Obj.H@assays$RNA@data
+dense.matrix <- as.matrix(sparse.matrix)
+dense.matrix <- t(dense.matrix)
+
+label_list <- paste(Seu.Obj.H@meta.data$condition, Seu.Obj.H@meta.data$cell_type, sep = "_")
+
+# Save the test set
+write.table(as.data.frame(dense.matrix), file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/Human_only/Human_test_set.csv", sep = ",", col.names = T, row.names = T)
+
+write.csv(label_list, file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/Human_only/Human_test_set_labels.csv", row.names = FALSE)
+```
 

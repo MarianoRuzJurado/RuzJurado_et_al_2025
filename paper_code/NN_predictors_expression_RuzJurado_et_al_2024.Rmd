@@ -101,9 +101,145 @@ for (gene in genes_of_interest) {
                             wilcox_test = T,
                             x_label_rotation = 0
                             )
-ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/",gene,"_CM_barplot.pdf",
-       height = 6, width = 4))
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/",gene,"_CM_barplot.pdf"),
+       height = 5, width = 3)
 }
+```
+
+#4. Bar plots for top predictors in EC
+
+```{r}
+#reannotate cell types to make comparison
+Seu.Obj.annotated$EC_other <- plyr::revalue(Seu.Obj.annotated$cell_type,
+                                             c(`Fibroblasts` = "Other",
+                                               `Cardiomyocytes` = "Other",
+                                               `Pericytes` = "Other",
+                                               `Immune.cells` = "Other",
+                                               `Smooth.Muscle` = "Other",
+                                               `Neuro` = "Other"))
+
+genes_of_interest <- c("EGFL7","MECOM","LDB2","PTPRB","PECAM1","ST6GALNAC3","PLCB1","LAMA2")
+for (gene in genes_of_interest) {
+  DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated,
+                            Feature = gene,
+                            group.by = "EC_other",
+                            ctrl.condition = "Endothelial",
+                            SeuV5 = F,
+                            stat_pos_mod = 1.03,
+                            wilcox_test = T,
+                            x_label_rotation = 0
+                            )
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/",gene,"_EC_barplot.pdf"),
+       height = 5, width = 3)
+}
+```
+
+#. Bar plots for top predictors in HFrEF (MT- gene analysis)
+
+```{r}
+# to keep it simple
+Seu.Obj.annotated$disease <- plyr::revalue(Seu.Obj.annotated$disease,c(`CTRL.LV` = "CTRL",
+                                   `CTRL.SP` = "CTRL"))
+
+Seu.Obj.annotated$HFrEF_other <- plyr::revalue(Seu.Obj.annotated$disease,
+                                             c(`CTRL` = "Other",
+                                               `HFpEF` = "Other",
+                                               `Hypertrophy` = "Other"))
+# MT genes used as preictors among top 10
+genes_of_interest <- c("MT-ND3","MT-ND4","MT-ND5","MT-CO2","MT-ATP6","MT-CYB","MT-ND2","MT-ND4L")
+for (gene in genes_of_interest) {
+  DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated,
+                            Feature = gene,
+                            group.by = "HFrEF_other",
+                            ctrl.condition = "HFrEF",
+                            SeuV5 = F,
+                            stat_pos_mod = 1.03,
+                            wilcox_test = T,
+                            x_label_rotation = 0
+                            )
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/",gene,"_HFrEF_barplot.pdf"),
+       height = 5, width = 3)
+}
+
+#Look species and cell type specific
+Seu.Obj.annotated.H <- subset(Seu.Obj.annotated, subset = species == "Human")
+Seu.Obj.annotated.M <- subset(Seu.Obj.annotated, subset = species == "Mice")
+
+Seu.Obj.annotated.H.HFrEF <- subset(Seu.Obj.annotated.H, subset = HFrEF_other == "HFrEF")
+Seu.Obj.annotated.M.HFrEF <- subset(Seu.Obj.annotated.M, subset = HFrEF_other == "HFrEF")
+
+Seu.Obj.annotated.HFrEF <- subset(Seu.Obj.annotated, subset = HFrEF_other == "HFrEF")
+
+for (gene in genes_of_interest) {
+  DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated.H.HFrEF,
+                            Feature = gene,
+                            group.by = "cell_type",
+                            ctrl.condition = "Cardiomyocytes",
+                            SeuV5 = F,
+                            stat_pos_mod = 1.03,
+                            wilcox_test = T,
+                            x_label_rotation = 45
+                            )
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/",gene,"_Human_HFrEF_per_cell_type_barplot.pdf"),
+       height = 5, width = 6)
+}
+
+for (gene in genes_of_interest) {
+  DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated.M.HFrEF,
+                            Feature = gene,
+                            group.by = "cell_type",
+                            ctrl.condition = "Cardiomyocytes",
+                            SeuV5 = F,
+                            stat_pos_mod = 1.03,
+                            wilcox_test = T,
+                            x_label_rotation = 45
+                            )
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/",gene,"_Mice_HFrEF_per_cell_type_barplot.pdf"),
+       height = 5, width = 6)
+}
+
+for (gene in genes_of_interest) {
+  DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated.HFrEF,
+                            Feature = gene,
+                            group.by = "species",
+                            ctrl.condition = "Human",
+                            SeuV5 = F,
+                            stat_pos_mod = 1.03,
+                            wilcox_test = T,
+                            x_label_rotation = 45
+                            )
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/",gene,"_species_HFrEF_barplot.pdf"),
+       height = 5, width = 3)
+}
+
+for (gene in genes_of_interest) {
+  DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated.M,
+                            Feature = gene,
+                            group.by = "disease",
+                            ctrl.condition = "HFrEF",
+                            SeuV5 = F,
+                            stat_pos_mod = 1.03,
+                            wilcox_test = T,
+                            x_label_rotation = 45
+  )
+  ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/",gene,"_Mice_disease_HFrEF_barplot.pdf"),
+       height = 5, width = 5)
+}
+
+for (gene in genes_of_interest) {
+  DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated.H,
+                            Feature = gene,
+                            group.by = "disease",
+                            ctrl.condition = "HFrEF",
+                            SeuV5 = F,
+                            stat_pos_mod = 1.03,
+                            wilcox_test = T,
+                            x_label_rotation = 45
+  )
+  ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/",gene,"_Human_disease_HFrEF_barplot.pdf"),
+       height = 5, width = 5)
+}
+
 ```
 
 #. Bar plots for top predictors in HFpEF
@@ -124,3 +260,734 @@ DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated,
 ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/FGF12_HFpEF_barplot.pdf",
        height = 6, width = 5)
 ```
+
+
+#. Check expression in transcriptomic data from XAI-DGE Test
+
+```{r}
+#in Human CM AS vs Human CM CTRL
+Seu.Obj.annotated.H <- subset(Seu.Obj.annotated, subset = species == "Human")
+Seu.Obj.annotated.H.CM <- subset(Seu.Obj.annotated.H, subset = cell_type == "Cardiomyocytes")
+Seu.Obj.annotated.H.CM$disease <- plyr::revalue(Seu.Obj.annotated.H.CM$disease,c(`CTRL.LV` = "CTRL",
+                                   `CTRL.SP` = "CTRL"))
+Seu.Obj.annotated.H.CM <- subset(Seu.Obj.annotated.H.CM, subset = disease %in% c("CTRL", "Hypertrophy"))
+DO.Mean.SEM.Graphs.wilcox(Seu.Obj.annotated.H.CM,
+                          Feature = "TNNT1",
+                          group.by = "disease",
+                          ctrl.condition = "CTRL",
+                          SeuV5 = F,
+                          stat_pos_mod = 1.0,
+                          wilcox_test = T)
+
+
+ggsave(filename = "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_XAI_Seurat/comb/TNNT1_Human_AS_CM.pdf" , height = 6, width = 4)
+
+FindMarkers(Seu.Obj.annotated.H.CM,
+            features = "RPS23",
+            min.pct = 0, logfc.threshold = 0,
+            ident.1 = "Hypertrophy", ident.2 = "CTRL",
+            group.by = "disease",
+            test.use = "wilcox_limma")
+
+Seu.Obj.annotated.M <- subset(Seu.Obj.annotated, subset = species == "Mice")
+Seu.Obj.annotated.M.CM <- subset(Seu.Obj.annotated.M, subset = cell_type == "Cardiomyocytes")
+Seu.Obj.annotated.M.CM$disease <- plyr::revalue(Seu.Obj.annotated.M.CM$disease,c(`CTRL.LV` = "CTRL",
+                                   `CTRL.SP` = "CTRL"))
+
+
+DO.Mean.SEM.Graphs.wilcox(Seu.Obj.annotated.M.CM,
+                          Feature = "FGF12",
+                          group.by = "disease",
+                          ctrl.condition = "CTRL",
+                          SeuV5 = F,
+                          stat_pos_mod = 1.05,
+                          wilcox_test = T)
+
+
+
+Idents(Seu.Obj.annotated) <- "orig.ident"
+orig.ident <- levels(Idents(Seu.Obj.annotated))
+Seu.Obj.test <- subset(Seu.Obj.annotated, idents = orig.ident[orig.ident %in% c("Mice-AS-n2",
+                                                                  "Mice-HFpEF-n1",  
+                                                                  "Mice-HFrEF-n2",
+                                                                  "Mice-CTRL-n6",
+                                                                  "Human-AS-n4", 
+                                                                  "Human-HFpEF-n2",
+                                                                  "Human-HFrEF-n2",
+                                                                  "Human-CTRLlv-n2",
+                                                                  "Human_CTRLsp-n2")])
+
+#Human cm as vs CTRL 
+xai_DGE <- openxlsx::read.xlsx("/media/Storage/anndata_shap/Z_SHAP/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5/t_test_on_class_9_Human_Cardiomyocytes_AS_Human_Cardiomyocytes_CTRL.xlsx")
+genes <- xai_DGE$Feature
+
+seurat_DGE <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_Human_HF_min_pct_0.1_logfc_0.1.xlsx")
+seurat_DGE <- seurat_DGE[seurat_DGE$disease == "Hypertrophy" & seurat_DGE$celltype == "Cardiomyocytes",]
+
+# unique ones fromxai
+xai_DGE_unique <- xai_DGE[!(xai_DGE$Feature %in% seurat_DGE$gene),]
+
+df.features <- FindMarkers(Seu.Obj.annotated.H.CM,
+            features = xai_DGE_unique$Feature,
+            min.pct = 0, logfc.threshold = 0,
+            ident.1 = "Hypertrophy", ident.2 = "CTRL",
+            group.by = "disease",
+            test.use = "wilcox_limma")
+
+df.features <- df.features[order(df.features$avg_log2FC, decreasing = T),]
+df.features.min.pct <- df.features[df.features$pct.1 >= 0.1 | df.features$pct.2 >= 0.1,]
+df.features.p_value <- df.features[df.features$p_val_adj > 0.05,]
+df.features.p_value <- df.features.p_value[complete.cases(df.features.p_value),]
+
+df.features_comb_cond <- df.features[(df.features$pct.1 >= 0.1 | df.features$pct.2 >= 0.1) & (df.features$p_val_adj > 0.05),]
+
+DO.Mean.SEM.Graphs.wilcox(Seu.Obj.annotated.H,
+                          Feature = "NOTCH4",
+                          group.by = "cell_type",
+                          ctrl.condition = "Cardiomyocytes",
+                          SeuV5 = F,
+                          stat_pos_mod = 1.0,
+                          wilcox_test = F)
+ggsave(filename = "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_XAI_Seurat/Seurat_only/NOTCH4cell_type_Human.pdf" , height = 5, width = 6)
+
+openxlsx::write.xlsx(xai_DGE_unique,"/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/XAI_DGE/t_test_on_class_9_Human_Cardiomyocytes_AS_Human_Cardiomyocytes_CTRL_XAI_ONLY.xlsx")
+
+# unique ones seurat
+seurat_DGE_unique <- seurat_DGE[!(seurat_DGE$gene %in% xai_DGE$Feature),]
+openxlsx::write.xlsx(seurat_DGE_unique,"/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/subsets/DGE_Human_HF_min_pct_0.1_logfc_0.1_CM_AS_CTRL_SEURAT_ONLY.xlsx")
+
+
+
+#in Human EC HFrEF vs Human EC HFrEF
+
+Seu.Obj.annotated.H.EC <- subset(Seu.Obj.annotated.H, subset = cell_type == "Endothelial")
+Seu.Obj.annotated.H.EC$disease <- plyr::revalue(Seu.Obj.annotated.H.EC$disease,c(`CTRL.LV` = "CTRL",
+                                   `CTRL.SP` = "CTRL"))
+Seu.Obj.annotated.H.EC <- subset(Seu.Obj.annotated.H.EC, subset = disease %in% c("CTRL", "HFrEF"))
+
+DO.Mean.SEM.Graphs.wilcox(Seu.Obj.annotated.H.EC,
+                          Feature = "GLG1",
+                          group.by = "disease",
+                          ctrl.condition = "HFrEF",
+                          SeuV5 = F,
+                          stat_pos_mod = 1.0,
+                          wilcox_test = T)
+ggsave(filename = "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_XAI_Seurat/XAI_only/GLG1_Human_HFrEF_EC.pdf" , height = 6, width = 4)
+
+
+
+xai_DGE <- openxlsx::read.xlsx("/media/Storage/anndata_shap/Z_SHAP/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5/t_test_on_class_11_Human_Endothelial_HFrEF_Human_Endothelial_CTRL.xlsx")
+genes <- xai_DGE$Feature
+
+# unique ones fromxai
+xai_DGE_unique <- xai_DGE[!(xai_DGE$Feature %in% seurat_DGE$gene),]
+openxlsx::write.xlsx(xai_DGE_unique,"/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/XAI_DGE/subsets/t_test_on_class_9_Human_Endothelial_HFrEF_Human_Endothelial_CTRL_XAI_ONLY.xlsx")
+
+seurat_DGE <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_Human_HF_min_pct_0.1_logfc_0.1.xlsx")
+seurat_DGE <- seurat_DGE[seurat_DGE$disease == "HFrEF" & seurat_DGE$celltype == "Endothelial",]
+# unique ones seurat
+seurat_DGE_unique <- seurat_DGE[!(seurat_DGE$gene %in% xai_DGE$Feature),]
+openxlsx::write.xlsx(seurat_DGE_unique,"/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/subsets/DGE_Human_HF_min_pct_0.1_logfc_0.1_EC_HFrEF_CTRL_SEURAT_ONLY.xlsx")
+
+
+#found in both
+common_DGE <- xai_DGE[(xai_DGE$Feature %in% seurat_DGE$gene),]
+common_DGE <- common_DGE[!(common_DGE$Feature %in% grep(pattern = "MT-", x = common_DGE$Feature, value = TRUE)),]
+openxlsx::write.xlsx(common_DGE,"/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/common_DGE/DGE_Human_HF_min_pct_0.1_logfc_0.1_EC_HFrEF_CTRL_XAI_SEURAT.xlsx")
+
+```
+
+#5. try disgenet2r and ctd database + normalization of scores
+```{r}
+library(disgenet2r)
+api_key <- "c5453f53-ce67-47ff-95e1-92bc4534e112"
+Sys.setenv(DISGENET_API_KEY=api_key)
+
+#HFrEF
+res <- disease2gene(disease = "UMLS_C3839346",
+                    database = "ALL",
+                    score = c(0.3,1))
+tab_HFrEF <- unique(res@qresult[,c("gene_symbol", "disease_name", "score", "yearInitial", "yearFinal")])
+openxlsx::write.xlsx(tab_HFrEF, "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/disgenet_tables/genes_associated_with_HFrEF.xlsx")
+#HFpEF
+res <- disease2gene(disease = "UMLS_C2960127",
+                    database = "ALL",
+                    score = c(0.3,1))
+tab_HFpEF <- unique(res@qresult[,c("gene_symbol", "disease_name", "score", "yearInitial", "yearFinal")])
+openxlsx::write.xlsx(tab_HFpEF, "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/disgenet_tables/genes_associated_with_HFpEF.xlsx")
+#HF
+res <- disease2gene(disease = "UMLS_C0018801",
+                    database = "ALL",
+                    score = c(0.3,1))
+tab_HF <- unique(res@qresult[,c("gene_symbol", "disease_name", "score", "yearInitial", "yearFinal")])
+openxlsx::write.xlsx(tab_HF, "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/disgenet_tables/genes_associated_with_HF.xlsx")
+
+#AS
+res <- disease2gene(disease = "UMLS_C0003507",
+                    database = "ALL",
+                    score = c(0.3,1))
+tab_AS <- unique(res@qresult[,c("gene_symbol", "disease_name", "score", "yearInitial", "yearFinal")])
+openxlsx::write.xlsx(tab_AS, "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/disgenet_tables/genes_associated_with_AS.xlsx")
+
+#increase true positives by the ctd database found genes associated with HF
+tab_ctd_HF <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/disgenet_tables/ctd table/CTD_D006333_genes_20240719073628.xlsx")
+tab_ctd_HF <- tab_ctd_HF[grep("marker", tab_ctd_HF$Direct.Evidence),]
+
+tab_HF_disgenet <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/disgenet_tables/genes_associated_with_HF.xlsx")
+
+tab_ctd_HF.uni <- tab_ctd_HF[!(tab_ctd_HF$Gene.Symbol %in% tab_HF_disgenet$gene_symbol),]
+tab_ctd_HF.uni <- tab_ctd_HF.uni[grep("Heart Failure",tab_ctd_HF.uni$Disease.Name),]
+
+res_tab_ctd_HF.uni <- gene2disease(gene = tab_ctd_HF.uni$Gene.ID,
+                                   vocabulary = "ENTREZ",
+                                   database = "ALL",
+                                   score = c(0.1,1))
+#grep relevant disease
+res_tab_ctd_HF.uni_qresult <- res_tab_ctd_HF.uni@qresult
+res_tab_ctd_HF.uni_qresult.HF <- res_tab_ctd_HF.uni_qresult[grep("Heart Failure", res_tab_ctd_HF.uni_qresult$disease_name), ]
+#some column filtering
+res_tab_ctd_HF.uni_qresult.HF <- res_tab_ctd_HF.uni_qresult.HF %>% dplyr::select(gene_symbol,disease_name,score,yearInitial,yearFinal)
+
+tab_HF_disgenet_ctd <- rbind(tab_HF_disgenet, res_tab_ctd_HF.uni_qresult.HF)
+tab_HF_disgenet_ctd <- tab_HF_disgenet_ctd[order(tab_HF_disgenet_ctd$score, decreasing = T),]
+openxlsx::write.xlsx(tab_HF_disgenet_ctd, "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/disgenet_tables/combined/genes_HF_disgenet_ctd.xlsx")
+
+```
+
+
+##5.1 Score calculations for each DEG list and comparison to seurat 
+
+```{r}
+#read in the combined excelsheet
+tab_HF <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/disgenet_tables/combined/genes_HF_disgenet_ctd.xlsx")
+
+#sum the scores if found by XAI and the same for seurat
+sum(tab_HF[tab_HF$gene_symbol %in% xai_DGE$Feature,]$score)
+sum(tab_HF[tab_HF$gene_symbol %in% seurat_DGE$gene,]$score)
+
+#sum the scores if found by XAI and the same for seurat, unique
+sum(tab_HF[tab_HF$gene_symbol %in% xai_DGE_unique$Feature,]$score)
+sum(tab_HF[tab_HF$gene_symbol %in% seurat_DGE_unique$gene,]$score)
+
+seurat_DGE <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_Human_HF_min_pct_0.1_logfc_0.1.xlsx")
+
+xai_path <- "/media/Storage/anndata_shap/Z_SHAP/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5_avgExp_0.05/"
+result_list <- list()
+for (disease in unique(seurat_DGE$disease)) {
+  seu_DGE_dis <- seurat_DGE[seurat_DGE$disease == disease,]
+
+    for (celltype in unique(seurat_DGE$celltype)) {
+    seu_DGE_dis_cell <- seu_DGE_dis[seu_DGE_dis$celltype == celltype,]
+    
+    #some naming stuff for finding the right xai DGE file
+    class_xai <- switch(disease,
+                        "Hypertrophy" = "class_9",
+                        "HFpEF" = "class_10",
+                        "HFrEF" = "class_11",
+                        NULL)
+    disease_xai <- disease
+    if (disease_xai == "Hypertrophy") {disease_xai <- "AS"}
+    
+    #Load in XAI
+    xai_DGE <- openxlsx::read.xlsx(paste0(xai_path,"t_test_on_",class_xai,"_Human_",celltype,"_",disease_xai,"_Human_",celltype,"_CTRL.xlsx"))
+    
+    norm_score_xai <- sum(tab_HF[tab_HF$gene_symbol %in% xai_DGE$Feature,]$score) / length(xai_DGE$Feature)
+    norm_score_seu <- sum(tab_HF[tab_HF$gene_symbol %in% seu_DGE_dis_cell$gene,]$score) / length(seu_DGE_dis_cell$gene)
+    
+    result_list[["Wilcoxon"]][[disease]][[celltype]][["norm_score_all"]] <- norm_score_seu
+    result_list[["XAI"]][[disease]][[celltype]][["norm_score_all"]] <- norm_score_xai
+
+    seurat_DGE_unique <- seu_DGE_dis_cell[!(seu_DGE_dis_cell$gene %in% xai_DGE$Feature),]
+    xai_DGE_unique <- xai_DGE[!(xai_DGE$Feature %in% seu_DGE_dis_cell$gene),]
+    
+    # score normalization on calculation for HF genes found unique genes
+    norm_score_xai <- sum(tab_HF[tab_HF$gene_symbol %in% xai_DGE_unique$Feature,]$score) / length(xai_DGE_unique$Feature)
+    norm_score_seu <- sum(tab_HF[tab_HF$gene_symbol %in% seurat_DGE_unique$gene,]$score) / length(seurat_DGE_unique$gene)
+    
+    result_list[["Wilcoxon"]][[disease]][[celltype]][["norm_score_unique"]] <- norm_score_seu_un
+    result_list[["XAI"]][[disease]][[celltype]][["norm_score_unique"]] <- norm_score_xai_un
+    
+    }
+}
+
+
+wide.df <- as.data.frame(result_list)
+df.result_list <- pivot_longer(wide.df, cols = everything(), names_to = c("Tool","Disease","Cell_Type", "Metric"), names_sep = "\\.")
+
+openxlsx::write.xlsx(df.result_list,"/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Score_table_comb/df.result_list.xlsx")
+
+# take just normlaized scores all
+df.result_list_all <- df.result_list[grep("norm_score_all",df.result_list$Metric),]
+# for Hypertrophy
+df.result_list_all.AS <- df.result_list_all[df.result_list_all$Disease == "HFpEF",]
+
+
+theme_box <- function(){
+  theme_bw() +
+    theme(
+      panel.border = element_rect(colour = "black", fill = NA, size = 1),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.line = element_line(colour = "black")
+    )
+}
+
+dot_colours <- rep(c("#2F4F4F","maroon","#4b006e","#ff7f0e"),5)
+ggplot(df.result_list_all.AS, aes(x=Cell_Type, y=value, shape=Tool, color=Tool))+
+  geom_point(aes(shape=Tool, size=Tool))+
+  theme_box() +
+  scale_color_manual(labels=c("Wilcoxon", "XAI_T-Test"), values =  dot_colours)+
+  scale_shape_manual(labels=c("Wilcoxon", "XAI_T-Test"), values = c(16,17))+
+  scale_size_manual(labels=c("Wilcoxon", "XAI_T-Test"), values = c(3,3))+
+  labs(title = "Human - HFpEF vs healthy", y = "Normalized GDA scores") +
+  theme(axis.text.x = element_text(color = "black",angle = 45,hjust = 1, size = 14, family = "Helvetica"),
+        axis.text.y = element_text(color = "black", size = 14, family = "Helvetica"),
+        axis.title.x = element_blank(),
+        axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+        plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
+        axis.line = element_line(color = "black"),
+        strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+        legend.position = "right")
+
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/scatterplots/Human_HFpEF_CTRL_GDA_Scores_Seurat_XAI.pdf", width = 6.5, height = 5)
+dev.off()
+```
+
+##5.2 HPA cell type specific DEGs analysis
+
+```{r}
+HPA_nTPM <- read.delim2(file = "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/HPA_single_cell_tpm/rna_single_cell_type_tissue.tsv", sep = "\t", header = TRUE)
+HPA_nTPM_Heart <- HPA_nTPM[HPA_nTPM$Tissue == "heart muscle",]
+
+xai_DGE <- openxlsx::read.xlsx("/media/Storage/anndata_shap/Z_SHAP/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5/t_test_on_class_11_Human_Endothelial_HFrEF_Human_Endothelial_CTRL.xlsx")
+
+seurat_DGE_sub <- seurat_DGE[seurat_DGE$disease == "HFrEF" & seurat_DGE$celltype == "Endothelial", ]
+seurat_DGE_sub_uni <- seurat_DGE_sub[!(seurat_DGE_sub$gene %in% xai_DGE$Feature),]
+xai_DGE_genes <- xai_DGE[!(xai_DGE$Feature %in% seurat_DGE_sub$gene),]
+
+xai_DGE_genes <- xai_DGE_genes[(xai_DGE_genes$avg_cube_root_FC > 0 & xai_DGE_genes$predictor_type == "Direct") | (xai_DGE_genes$avg_cube_root_FC < 0 & xai_DGE_genes$predictor_type == "Inverse"),]
+
+HPA_result_list_numbers <- list()
+for (gene in seurat_DGE_sub_uni$gene) {
+  if (gene %in% unique(HPA_nTPM_Heart$Gene.name)) {
+  HPA_nTPM_Heart_gene <- HPA_nTPM_Heart[HPA_nTPM_Heart$Gene.name == gene,]
+  #filter the cardiomyocyte, ec rows, just keep the one with highest expression
+  CM.row <- HPA_nTPM_Heart_gene %>% dplyr::filter(Cell.type == "cardiomyocytes") %>% dplyr::slice_max(as.numeric(nTPM), with_ties = FALSE)
+  EC.row <- HPA_nTPM_Heart_gene %>% dplyr::filter(Cell.type == "endothelial cells") %>% dplyr::slice_max(as.numeric(nTPM), with_ties = FALSE)
+  other_rows <- HPA_nTPM_Heart_gene %>% dplyr::filter(!(Cell.type %in% c("cardiomyocytes", "endothelial cells")))
+  HPA_nTPM_Heart_gene <- bind_rows(CM.row, EC.row, other_rows)
+  HPA_nTPM_Heart_gene <- HPA_nTPM_Heart_gene[order(as.numeric(HPA_nTPM_Heart_gene$nTPM), decreasing = T),]
+  HPA_result_list_numbers[["Seurat"]][["Endothelial"]][[gene]] <- which(HPA_nTPM_Heart_gene$Cell.type == "endothelial cells")
+  }
+}
+for (gene in xai_DGE_genes$Feature) {
+  if (gene %in% unique(HPA_nTPM_Heart$Gene.name)) {
+  HPA_nTPM_Heart_gene <- HPA_nTPM_Heart[HPA_nTPM_Heart$Gene.name == gene,]
+  #filter the cardiomyocyte, ec rows, just keep the one with highest expression
+  CM.row <- HPA_nTPM_Heart_gene %>% dplyr::filter(Cell.type == "cardiomyocytes") %>% dplyr::slice_max(as.numeric(nTPM), with_ties = FALSE)
+  EC.row <- HPA_nTPM_Heart_gene %>% dplyr::filter(Cell.type == "endothelial cells") %>% dplyr::slice_max(as.numeric(nTPM), with_ties = FALSE)
+  other_rows <- HPA_nTPM_Heart_gene %>% dplyr::filter(!(Cell.type %in% c("cardiomyocytes", "endothelial cells")))
+  HPA_nTPM_Heart_gene <- bind_rows(CM.row, EC.row, other_rows)
+  HPA_nTPM_Heart_gene <- HPA_nTPM_Heart_gene[order(as.numeric(HPA_nTPM_Heart_gene$nTPM), decreasing = T),]
+  HPA_result_list_numbers[["XAI"]][["Endothelial"]][[gene]] <- which(HPA_nTPM_Heart_gene$Cell.type == "endothelial cells")
+  }
+}
+
+df.result_list_numbers <- pivot_longer(as.data.frame(HPA_result_list_numbers), cols = everything(), names_to = c("Tool","DEG_Celltype","Gene"), names_sep = "\\.")
+
+#contingency table
+contingency_table_numbers <- df.result_list_numbers %>% dplyr::group_by(Tool) %>% count(DEG_Celltype, value)
+
+density_df_numbers <- contingency_table_numbers %>% uncount(n) %>% dplyr::mutate(Tool = factor(Tool, levels =c("Seurat","XAI")), value=factor(value, levels = c( "1","2","3","4")))
+
+bar_colours <- rep(c("#2F4F4F","maroon","#4b006e","#ff7f0e"),5)
+ggplot(density_df_numbers, aes(x=value, fill=Tool))+
+  geom_bar(alpha=1) +
+  scale_fill_manual(values =  bar_colours 
+                  , name = "Tool")+
+  facet_wrap(~Tool, ncol = 9, scales = "free") +  
+  theme_box() +
+  theme(axis.text.x = element_text(color = "black",angle = 45,hjust = 1, size = 14, family = "Helvetica"),
+      axis.text.y = element_text(color = "black", size = 14, family = "Helvetica"),
+      axis.title.x = element_blank(),
+      axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+      plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
+      axis.line = element_line(color = "black"),
+      strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+      legend.position = "right")
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_HPA/Seurat_XAI_EC_unique_genes_density_df_numbers.pdf", height = 4, width = 7)
+
+
+# with CM
+HPA_nTPM <- read.delim2(file = "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/HPA_single_cell_tpm/rna_single_cell_type_tissue.tsv", sep = "\t", header = TRUE)
+HPA_nTPM_Heart <- HPA_nTPM[HPA_nTPM$Tissue == "heart muscle",]
+
+xai_DGE <- openxlsx::read.xlsx("/media/Storage/anndata_shap/Z_SHAP/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5/t_test_on_class_9_Human_Cardiomyocytes_AS_Human_Cardiomyocytes_CTRL.xlsx")
+
+seurat_DGE_sub <- seurat_DGE[seurat_DGE$disease == "Hypertrophy" & seurat_DGE$celltype == "Cardiomyocytes", ]
+seurat_DGE_sub_uni <- seurat_DGE_sub[!(seurat_DGE_sub$gene %in% xai_DGE$Feature),]
+xai_DGE_genes <- xai_DGE[!(xai_DGE$Feature %in% seurat_DGE_sub$gene),]
+
+# xai_DGE_genes <- xai_DGE_genes[(xai_DGE_genes$avg_cube_root_FC > 0 & xai_DGE_genes$predictor_type == "Direct") | (xai_DGE_genes$avg_cube_root_FC < 0 & xai_DGE_genes$predictor_type == "Inverse"),]
+
+HPA_result_list_numbers <- list()
+for (gene in seurat_DGE_sub_uni$gene) {
+  if (gene %in% unique(HPA_nTPM_Heart$Gene.name)) {
+  HPA_nTPM_Heart_gene <- HPA_nTPM_Heart[HPA_nTPM_Heart$Gene.name == gene,]
+  #filter the cardiomyocyte, ec rows, just keep the one with highest expression
+  CM.row <- HPA_nTPM_Heart_gene %>% dplyr::filter(Cell.type == "cardiomyocytes") %>% dplyr::slice_max(as.numeric(nTPM), with_ties = FALSE)
+  EC.row <- HPA_nTPM_Heart_gene %>% dplyr::filter(Cell.type == "endothelial cells") %>% dplyr::slice_max(as.numeric(nTPM), with_ties = FALSE)
+  other_rows <- HPA_nTPM_Heart_gene %>% dplyr::filter(!(Cell.type %in% c("cardiomyocytes", "endothelial cells")))
+  HPA_nTPM_Heart_gene <- bind_rows(CM.row, EC.row, other_rows)
+  HPA_nTPM_Heart_gene <- HPA_nTPM_Heart_gene[order(as.numeric(HPA_nTPM_Heart_gene$nTPM), decreasing = T),]
+  HPA_result_list_numbers[["Seurat"]][["Cardiomyocytes"]][[gene]] <- which(HPA_nTPM_Heart_gene$Cell.type == "cardiomyocytes")
+  }
+}
+for (gene in xai_DGE_genes$Feature) {
+  if (gene %in% unique(HPA_nTPM_Heart$Gene.name)) {
+  HPA_nTPM_Heart_gene <- HPA_nTPM_Heart[HPA_nTPM_Heart$Gene.name == gene,]
+  #filter the cardiomyocyte, ec rows, just keep the one with highest expression
+  CM.row <- HPA_nTPM_Heart_gene %>% dplyr::filter(Cell.type == "cardiomyocytes") %>% dplyr::slice_max(as.numeric(nTPM), with_ties = FALSE)
+  EC.row <- HPA_nTPM_Heart_gene %>% dplyr::filter(Cell.type == "endothelial cells") %>% dplyr::slice_max(as.numeric(nTPM), with_ties = FALSE)
+  other_rows <- HPA_nTPM_Heart_gene %>% dplyr::filter(!(Cell.type %in% c("cardiomyocytes", "endothelial cells")))
+  HPA_nTPM_Heart_gene <- bind_rows(CM.row, EC.row, other_rows)
+  HPA_nTPM_Heart_gene <- HPA_nTPM_Heart_gene[order(as.numeric(HPA_nTPM_Heart_gene$nTPM), decreasing = T),]
+  HPA_result_list_numbers[["XAI"]][["Cardiomyocytes"]][[gene]] <- which(HPA_nTPM_Heart_gene$Cell.type == "cardiomyocytes")
+  }
+}
+
+df.result_list_numbers <- pivot_longer(as.data.frame(HPA_result_list_numbers), cols = everything(), names_to = c("Tool","DEG_Celltype","Gene"), names_sep = "\\.")
+
+#contingency table
+contingency_table_numbers <- df.result_list_numbers %>% dplyr::group_by(Tool) %>% count(DEG_Celltype, value)
+
+density_df_numbers <- contingency_table_numbers %>% uncount(n) %>% dplyr::mutate(Tool = factor(Tool, levels =
+                                                                                                 c("Seurat",
+                                                                                                   "XAI")),
+                                                                                 value= factor(value, levels = c( "1",
+                                                                                                                  "2",
+                                                                                                                  "3",
+                                                                                                                  "4")))
+
+bar_colours <- rep(c("#2F4F4F","maroon","#4b006e","#ff7f0e"),5)
+ggplot(density_df_numbers, aes(x=value, fill=Tool))+
+  geom_bar(alpha=1) +
+  scale_fill_manual(values =  bar_colours 
+                  , name = "Tool")+
+  facet_wrap(~Tool, ncol = 9, scales = "free") +  
+  theme_box() +
+  theme(axis.text.x = element_text(color = "black",angle = 45,hjust = 1, size = 14, family = "Helvetica"),
+      axis.text.y = element_text(color = "black", size = 14, family = "Helvetica"),
+      axis.title.x = element_blank(),
+      axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+      plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
+      axis.line = element_line(color = "black"),
+      strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+      legend.position = "right")
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_HPA/Seurat_XAI_CM_unique_genes_density_df_numbers.pdf", height = 4, width = 7)
+```
+
+##5.3 DEGs cell type specific in regards of our data
+
+```{r}
+#try with human HFrEF DEGs
+Seu.Obj.annotated.HFrEF.H <- subset(Seu.Obj.annotated, subset = (disease == "HFrEF") & (species == "Human"))
+
+Avg_expr_H_HFrEF <- as.data.frame(AverageExpression(Seu.Obj.annotated.HFrEF.H, group.by = "cell_type", assays = "RNA")$RNA)
+
+xai_DGE <- openxlsx::read.xlsx("/media/Storage/anndata_shap/Z_SHAP/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5/t_test_on_class_11_Human_Endothelial_HFrEF_Human_Endothelial_CTRL.xlsx")
+
+seurat_DGE <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_Human_HF_min_pct_0.1_logfc_0.1.xlsx")
+seurat_DGE_sub <- seurat_DGE[seurat_DGE$disease == "HFrEF" & seurat_DGE$celltype == "Endothelial", ]
+
+seurat_DGE_sub_uni <- seurat_DGE_sub[!(seurat_DGE_sub$gene %in% xai_DGE$Feature),]
+xai_DGE_genes <- xai_DGE[!(xai_DGE$Feature %in% seurat_DGE_sub$gene),]
+
+xai_DGE_genes <- xai_DGE_genes[(xai_DGE_genes$avg_cube_root_FC > 0 & xai_DGE_genes$predictor_type == "Direct") | (xai_DGE_genes$avg_cube_root_FC < 0 & xai_DGE_genes$predictor_type == "Inverse"),]
+
+expr_result_list_numbers <- list()
+for (gene in seurat_DGE_sub_uni$gene) {
+  Avg_expr_gene <- melt(Avg_expr_H_HFrEF[rownames(Avg_expr_H_HFrEF) == gene,], id.vars = 0)
+  Avg_expr_gene <- Avg_expr_gene[order(Avg_expr_gene$value, decreasing = T),]
+  expr_result_list_numbers[["Seurat"]][["Endothelial"]][[gene]] <- which(Avg_expr_gene$variable == "Endothelial")
+}
+for (gene in xai_DGE_genes$Feature) {
+  Avg_expr_gene <- melt(Avg_expr_H_HFrEF[rownames(Avg_expr_H_HFrEF) == gene,], id.vars = 0)
+  Avg_expr_gene <- Avg_expr_gene[order(Avg_expr_gene$value, decreasing = T),]
+  expr_result_list_numbers[["XAI"]][["Endothelial"]][[gene]] <- which(Avg_expr_gene$variable == "Endothelial")
+}
+
+df.expr_result_list_numbers <- pivot_longer(as.data.frame(expr_result_list_numbers), cols = everything(), names_to = c("Tool","DEG_Celltype","Gene"), names_sep = "\\.")
+
+#contingency table
+contingency_table_numbers <- df.expr_result_list_numbers %>% dplyr::group_by(Tool) %>% count(DEG_Celltype, value)
+
+density_df_numbers <- contingency_table_numbers %>%
+  uncount(n) %>%
+  dplyr::mutate(Tool = factor(Tool, levels =c("Seurat","XAI")),
+                value= factor(value, levels = c( "1","2","3","4","5","6","7")))
+
+bar_colours <- rep(c("#2F4F4F","maroon","#4b006e","#ff7f0e"),5)
+ggplot(density_df_numbers, aes(x=value, fill=Tool))+
+  geom_bar(alpha=1) +
+  scale_fill_manual(values =  bar_colours 
+                  , name = "Tool")+
+  facet_wrap(~Tool, ncol = 9, scales = "free") +  
+  theme_box() +
+  theme(axis.text.x = element_text(color = "black",angle = 45,hjust = 1, size = 14, family = "Helvetica"),
+      axis.text.y = element_text(color = "black", size = 14, family = "Helvetica"),
+      axis.title.x = element_blank(),
+      axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+      plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
+      axis.line = element_line(color = "black"),
+      strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+      legend.position = "right")
+
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_Avg_Expr/Seurat_XAI_EC_unique_genes_density_df_numbers.pdf", height = 4, width = 7)
+
+for (genes in seurat_DGE_sub_uni$gene) {
+  DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated.HFrEF.H,
+                            SeuV5 = F,
+                            Feature = genes,
+                            group.by = "cell_type",
+                            ctrl.condition = "Cardiomyocytes",
+                            wilcox_test = F)
+  ggsave(filename = paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_seurat_uni/barplot_", genes, ".pdf"), width = 6, height = 5)
+}
+
+for (genes in xai_DGE_genes$Feature) {
+  DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated.HFrEF.H,
+                            SeuV5 = F,
+                            Feature = genes,
+                            group.by = "cell_type",
+                            ctrl.condition = "Cardiomyocytes",
+                            wilcox_test = F)
+  ggsave(filename = paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_xai_uni/barplot_", genes, ".pdf"), width = 6, height = 5)
+}
+
+```
+
+
+#6. Benchmark with Seurat tools and XAI using the disgenet GDA scores
+
+```{r}
+
+#read in the combined excelsheet
+tab_HF <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/disgenet_tables/combined/genes_HF_disgenet_ctd.xlsx")
+
+seurat_DGE <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_COMPLETE_withRANDOM_Human_HF_min_pct_0.1_logfc_0.1.xlsx")
+
+# avgExp threshodl 0.1
+xai_path <- "/media/Storage/anndata_shap/Z_SHAP/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5_avgExp_0.1/"
+result_list <- list()
+test.Seurat <- c("wilcox","wilcox_limma","bimod","t","negbinom","poisson","LR","MAST","roc","DESeq2","Random")
+for (disease in unique(seurat_DGE$disease)) {
+  seu_DGE_dis <- seurat_DGE[seurat_DGE$disease == disease,]
+
+    for (celltype in unique(seurat_DGE$celltype)) {
+    seu_DGE_dis_cell <- seu_DGE_dis[seu_DGE_dis$celltype == celltype,]
+    
+    #some naming stuff for finding the right xai DGE file
+    class_xai <- switch(disease,
+                        "Hypertrophy" = "class_9",
+                        "HFpEF" = "class_10",
+                        "HFrEF" = "class_11",
+                        NULL)
+    #Some adjustments because of file names...
+    disease_xai <- disease
+    celltype_xai <- celltype
+    if (disease_xai == "Hypertrophy") {disease_xai <- "AS"}
+    if (celltype_xai  == "Immune.cells") {celltype_xai <- "ImmuneCells"}
+    if (celltype_xai  == "Smooth.Muscle") {celltype_xai <- "SmoothMuscle"}
+    
+    #Load in XAI
+    xai_DGE <- openxlsx::read.xlsx(paste0(xai_path,"t_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx"))
+    
+    norm_score_xai <- sum(tab_HF[tab_HF$gene_symbol %in% xai_DGE$Feature,]$score) / length(xai_DGE$Feature)
+    result_list[["XAI"]][[disease]][[celltype_xai]][["norm_score_all"]] <- norm_score_xai
+    
+    for (tests in test.Seurat) {
+      seu_DGE_dis_cell_test <- seu_DGE_dis_cell[seu_DGE_dis_cell$testmethod == tests,]
+      norm_score_seu <- sum(tab_HF[tab_HF$gene_symbol %in% seu_DGE_dis_cell_test$gene,]$score) / length(seu_DGE_dis_cell_test$gene)
+      result_list[[tests]][[disease]][[celltype_xai]][["norm_score_all"]] <- norm_score_seu
+    }
+  }
+}
+
+
+flatten_list <- function(x, parent_name = "") {
+  if (is.list(x)) {
+    result <- list()
+    for (name in names(x)) {
+      full_name <- if (parent_name == "") name else paste(parent_name, name, sep = ".")
+      result <- c(result, flatten_list(x[[name]], full_name))
+    }
+    return(result)
+  } else {
+    return(setNames(list(x), parent_name))
+  }
+}
+wide.df <- as.data.frame(flatten_list(result_list))
+df.result_list <- pivot_longer(wide.df, cols = everything(), names_to = c("Tool","Disease","Cell_Type", "Metric"), names_sep = "\\.")
+
+
+
+#openxlsx::write.xlsx(df.result_list,"/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Score_table_comb/SHAP_tresh_0.1_log_0.5_avgExp_0.1/df_result_list_all_tests.xlsx")
+
+# for Hypertrophy
+df.result_list.AS <- df.result_list[df.result_list$Disease == "Hypertrophy",]
+
+
+theme_box <- function(){
+  theme_bw() +
+    theme(
+      panel.border = element_rect(colour = "black", fill = NA, size = 1),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.line = element_line(colour = "black")
+    )
+}
+
+df.result_list.AS$Tool <- factor(df.result_list.AS$Tool, levels = c("XAI", "wilcox", "wilcox_limma","bimod","t","negbinom","poisson","LR","MAST","roc","DESeq2","Random"))
+
+#exclude Neurons because of too small cell numbers
+df.result_list.AS <- df.result_list.AS[df.result_list.AS$Cell_Type != "Neuro",]
+
+dot_colours <- c("royalblue","#2c2cb4","#bb0099","maroon", "tomato", "#b35900", "#236e00", "#7ad500", "#881800", "#004655","#6fa9a9","#DAA520")
+ggplot(df.result_list.AS, aes(x=Cell_Type, y=value, shape=Tool, color=Tool))+
+  geom_point(aes(shape=Tool, size=Tool))+
+  theme_box() +
+  scale_color_manual(labels=unique(df.result_list.AS$Tool), values =  dot_colours)+
+  scale_shape_manual(labels=unique(df.result_list.AS$Tool), values = c(1,2,3,4,5,6,7,8,9,10,11,12,13))+
+  scale_size_manual(labels=unique(df.result_list.AS$Tool), values = rep(c(4,4),6))+
+  labs(title = "Human - Hypertrophy vs healthy", y = "Normalized GDA scores") +
+  theme(axis.text.x = element_text(color = "black",angle = 45,hjust = 1, size = 14, family = "Helvetica"),
+        axis.text.y = element_text(color = "black", size = 14, family = "Helvetica"),
+        axis.title.x = element_blank(),
+        axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+        plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
+        axis.line = element_line(color = "black"),
+        strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+        legend.position = "right")
+
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/scatterplots/.pdf", width = 6.5, height = 5)
+dev.off()
+```
+
+#7. Benchmark with Seurat tools and XAI using the disgenet gene names and making a line increasing with hits
+
+```{r}
+#read in the combined excelsheet
+tab_HF <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/disgenet_tables/combined/genes_HF_disgenet_ctd.xlsx")
+
+seurat_DGE <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_COMPLETE_withRANDOM_Human_HF_min_pct_0.1_logfc_0.1.xlsx")
+
+# avgExp threshodl 0.1
+xai_path <- "/media/Storage/anndata_shap/Z_SHAP/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5_avgExp_0.1/"
+test.Seurat <- c("wilcox","wilcox_limma","bimod","t","negbinom","poisson","LR","MAST","roc","DESeq2","Random")
+
+#for Hypertrophy CM
+for (disease in "Hypertrophy") {
+  seu_DGE_dis <- seurat_DGE[seurat_DGE$disease == disease,]
+
+    for (celltype in c("Endothelial")) {
+    seu_DGE_dis_cell <- seu_DGE_dis[seu_DGE_dis$celltype == celltype,]
+    
+    #some naming stuff for finding the right xai DGE file
+    class_xai <- switch(disease,
+                        "Hypertrophy" = "class_9",
+                        "HFpEF" = "class_10",
+                        "HFrEF" = "class_11",
+                        NULL)
+    #Some adjustments because of file names...
+    disease_xai <- disease
+    celltype_xai <- celltype
+    if (disease_xai == "Hypertrophy") {disease_xai <- "AS"}
+    if (celltype_xai  == "Immune.cells") {celltype_xai <- "ImmuneCells"}
+    if (celltype_xai  == "Smooth.Muscle") {celltype_xai <- "SmoothMuscle"}
+    
+    #Load in XAI
+    xai_DGE <- openxlsx::read.xlsx(paste0(xai_path,"t_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx"))
+    
+    xai_DGE <- xai_DGE[order(xai_DGE$p_adj, decreasing = F),]
+    #collector list for p-adj sorted gene names
+    list_genes_tool <- list(XAI = xai_DGE$Feature)
+    
+    for (tests in test.Seurat) {
+      seu_DGE_dis_cell_test <- seu_DGE_dis_cell[seu_DGE_dis_cell$testmethod == tests,]
+      seu_DGE_dis_cell_test <- seu_DGE_dis_cell_test[order(seu_DGE_dis_cell_test$p_val_adj, decreasing = F),]
+      list_genes_tool[[tests]] <- seu_DGE_dis_cell_test$gene
+    }
+  }
+}
+
+# Function to calculate cumulative steps
+calculate_cumulative_step <- function(gene_list, reference_list) {
+  step_data <- as.integer(gene_list %in% reference_list)
+  cumulative_step <- cumsum(step_data)
+  return(cumulative_step)
+}
+
+# Combine results into a single data frame
+df_combined <- do.call(rbind, lapply(names(list_genes_tool), function(list_name) {
+  gene_list <- list_genes_tool[[list_name]]
+  cumulative_step <- calculate_cumulative_step(gene_list, tab_HF$gene_symbol)
+  data.frame(Tool = list_name, rank = 1:length(gene_list), cumulative_step)
+}))
+
+theme_box_step_plot <- function(){
+  theme_bw() +
+    theme(
+      panel.border = element_rect(colour = "black", fill = NA, size = 1),
+      panel.grid.major = element_line(colour = "grey", linetype = "dotted"),
+      panel.grid.minor = element_line(colour = "grey", linetype = "dotted"),
+      axis.line = element_line(colour = "black"),
+      legend.background = element_rect(colour = "grey", fill = "white"),
+      legend.box.background = element_rect(colour = "grey", size = 0.5),
+    )
+}
+
+line_colours <- c("royalblue","#2c2cb4","#bb0099","maroon", "tomato", "#b35900", "#236e00", "#7ad500", "#881800", "#004655","#6fa9a9","#DAA520")
+line_types <- rep(c("solid","dashed"),12)
+
+df_combined$Tool <- plyr::revalue(df_combined$Tool,
+                                  c("wilcox" = "Wilcox",
+                                    "wilcox_limma" = "Wilcox_limma",
+                                    "t" = "t-test",
+                                    "poisson" = "Poisson",
+                                    "LR" = "LogReg",
+                                    "roc" = "ROC",
+                                    "Random" = "random"))
+
+df_combined$Tool <- factor(df_combined$Tool, levels = c("XAI","Wilcox","Wilcox_limma","bimod","t-test","negbinom", "Poisson","LogReg","MAST","ROC","DESeq2","random"))
+
+
+ggplot(df_combined, aes(x = rank, y = cumulative_step, color = Tool, group = Tool, linetype = Tool))+
+  geom_step(alpha=0.8, linewidth=1) +
+  #geom_abline(intercept = 0, slope = 0.02, color="grey",linetype = "dashed", size = 1)+
+  theme_box_step_plot() +
+  xlim(0,2000)+
+  ylim(0,70)+
+  scale_color_manual(labels = unique(df_combined$Tool), values = line_colours)+
+  scale_linetype_manual(labels = unique(df_combined$Tool), values = line_types) +
+  labs(title = "Human EC - Hypertrophy vs healthy", y = "HF associated gene detected", x = "Rank of DEG") +
+  theme(axis.text.x = element_text(color = "black",angle = 0,hjust = 1, size = 14, family = "Helvetica"),
+        axis.text.y = element_text(color = "black", size = 14, family = "Helvetica"),
+        axis.title.x = element_text(color = "black", size = 14, family = "Helvetica"),
+        axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+        plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
+        plot.subtitle = element_text(size = 14, hjust = 0, family = "Helvetica"),
+        axis.line = element_line(color = "black"),
+        strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+        legend.text = element_text(size = 14, color = "black", family = "Helvetica"),
+        legend.title = element_text(size = 14, color = "black", family = "Helvetica", face = "bold", hjust =0.5),
+        legend.position = c(0.99,0.01),
+        legend.justification = c("right", "bottom"),
+        legend.box.just = "right",
+        legend.key.width = unit(1.2, "cm"), # Adjust the width of the legend keys
+        legend.margin = margin(6, 6, 6, 6)) +
+guides(color = guide_legend(ncol = 2))
+
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/stepplot/Human_EC_Hypertrophy_CTRL_ranks.pdf", width = 9, height = 9)
+```
+
