@@ -764,10 +764,88 @@ label_list <- paste(Seu.Obj.SHAP@meta.data$condition, Seu.Obj.SHAP@meta.data$cel
 # Save the test set
 write.table(as.data.frame(dense.matrix), file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/240716_SHAP_set.csv", sep = ",", col.names = T, row.names = T)
 
-write.csv(label_list, file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/240716_SHAP_set_labels_labels.csv", row.names = FALSE)
+write.csv(label_list, file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/240716_SHAP_set_labels.csv", row.names = FALSE)
 
 ```
 
+##4.4 Extracting normalized expression data for SHAP value calculation (EXPLAIN ALL OUR DATA)
+
+```{r}
+# load object
+Seu.Obj.annotated <- readRDS(file = "/media/Helios_scStorage/Mariano/Human_Mice_Comparison/Human_Mice_Integrated/Seurat_and_R_objects/SeuratObject.combined.integrated.annotated_10_08_22.rds")
+DefaultAssay(object = Seu.Obj.annotated) <- "RNA"
+
+
+Idents(Seu.Obj.annotated) <- "orig.ident"
+orig.ident <- levels(Idents(Seu.Obj.annotated))
+
+
+#rename every Human-CTRL(sp,lv) Human-CTRL
+Idents(Seu.Obj.annotated) <- "condition"
+Seu.Obj.annotated$condition <- plyr::revalue(Seu.Obj.annotated$condition,c(`Human_CTRLsp` = "Human-CTRL",
+                                   `Human-CTRLlv` = "Human-CTRL"))
+
+#remove AS Neuros from mice, there are too few cells 
+remove.barcodes <- rownames(Seu.Obj.annotated@meta.data[Seu.Obj.annotated@meta.data$condition == "Mice-AS" & Seu.Obj.annotated@meta.data$cell_type == "Neuro",])
+Seu.Obj.annotated<- subset(Seu.Obj.annotated, cells = remove.barcodes, invert = TRUE)
+
+meta.data <- Seu.Obj.annotated@meta.data
+sparse.matrix <- Seu.Obj.annotated@assays$RNA@data
+dense.matrix <- as.matrix(sparse.matrix)
+dense.matrix <- t(dense.matrix)
+
+label_list <- paste(Seu.Obj.annotated@meta.data$condition, Seu.Obj.annotated@meta.data$cell_type, sep = "_")
+
+# Save the test set
+write.table(as.data.frame(dense.matrix), file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/240820_SHAP_set_whole_data.csv", sep = ",", col.names = T, row.names = T)
+
+write.csv(label_list, file = "/home/mariano/PycharmProjects/MLPGeneExpression/whole_matrix_Seurat_extract/240820_SHAP_set_whole_data_labels.csv", row.names = FALSE)
+
+```
+
+
+##4.5 Extracting normalized expression data for SHAP value calculation 200 cells per orig.ident & cell type (or everything of less)
+
+```{r}
+library(Seurat)
+library(dplyr)
+
+meta.data <-Seu.Obj.annotated@meta.data %>%
+  tibble::rownames_to_column(var="cell_id")
+
+sampled_cells <- meta.data %>%
+  dplyr::group_by(orig.ident, cell_type) %>%
+  sample_n(size = min(200, n()), replace = FALSE) %>%
+  pull(cell_id)
+
+# Subset the Seurat object to keep only the selected cells
+seurat_subset <- subset(Seu.Obj.annotated, cells = sampled_cells)
+
+# Check the distribution after subsetting
+table(seurat_subset$orig.ident, seurat_subset$cell_type)
+table(seurat_subset$cell_type)
+
+#rename every Human-CTRL(sp,lv) Human-CTRL
+Idents(seurat_subset) <- "condition"
+seurat_subset$condition <- plyr::revalue(seurat_subset$condition,c(`Human_CTRLsp` = "Human-CTRL",
+                                   `Human-CTRLlv` = "Human-CTRL"))
+#remove AS Neuros from mice, there are too few cells 
+remove.barcodes <- rownames(seurat_subset@meta.data[seurat_subset@meta.data$condition == "Mice-AS" & seurat_subset@meta.data$cell_type == "Neuro",])
+seurat_subset<- subset(seurat_subset, cells = remove.barcodes, invert = TRUE)
+
+
+meta.data <- seurat_subset@meta.data
+sparse.matrix <- seurat_subset@assays$RNA@data
+dense.matrix <- as.matrix(sparse.matrix)
+dense.matrix <- t(dense.matrix)
+
+label_list <- paste(seurat_subset@meta.data$condition, seurat_subset@meta.data$cell_type, sep = "_")
+
+# Save the test set
+write.table(as.data.frame(dense.matrix), file = "/media/Storage/anndata_shap/whole_matrix_Seurat_extract/240830_SHAP_set_balanced_200.csv", sep = ",", col.names = T, row.names = T)
+
+write.csv(label_list, file = "/media/Storage/anndata_shap/whole_matrix_Seurat_extract/240830_SHAP_set_balanced_200_labels.csv", row.names = FALSE)
+```
 
 #5. Extracting Human only expression matrix for re-training model on human data only
 

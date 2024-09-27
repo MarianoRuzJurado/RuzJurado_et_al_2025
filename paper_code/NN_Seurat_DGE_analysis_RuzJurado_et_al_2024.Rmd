@@ -238,6 +238,7 @@ for (celltype in unique(pseudo_Seu$cell_type)) {
 }
 
 Human_markers_final_dds <- Human_markers_final_dds[Human_markers_final_dds$p_val_adj<=0.05,]
+Human_markers_final_dds <- Human_markers_final_dds[abs(Human_markers_final_dds$avg_log2FC) >= 0.1,]
 names(Human_markers_final_dds)[names(Human_markers_final_dds) == "rowname"] <- "gene"
 
 write.xlsx(Human_markers_final_dds,file=paste0(outputFolder,"/DGE_DESeq2_Human_HF_min_pct_0.1_logfc_0.1.xlsx"), colNames = T, rowNames = F)

@@ -78,6 +78,53 @@ ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/
 
 ```
 
+##2.1 Human class For Figure 3b
+
+```{r}
+genes_of_interest  <- c("AIRN","FGF12","CMSS1","LIMS3","CAMK1D","LUC7L2","APOE","GPC6","MYH7","MYH6")
+
+for (gene in genes_of_interest) {
+  DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated,
+                            Feature = gene,
+                            group.by = "species",
+                            ctrl.condition = "Human",
+                            SeuV5 = F,
+                            stat_pos_mod = 1.08,
+                            wilcox_test = T,
+                            #bar_colours = c("#1f77b4","#ea7e1eff"),
+                            x_label_rotation = 0
+                            ,y_limits = c(0,2)
+                            )
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/Figure3/",gene,"_Human_barplot.pdf"),
+       height = 3.5, width = 3)
+}
+
+Seu.Obj.annotated$Human_other <- plyr::revalue(Seu.Obj.annotated$species,
+                                             c(`Mice` = "Other"))
+Seu.Obj.annotated$cell_type_shortened <- plyr::revalue(Seu.Obj.annotated$cell_type,
+                                                       c("Cardiomyocytes" = "CM",
+                                                         "Fibroblasts" = "FB",
+                                                         "Endothelial" = "EC",
+                                                         "Pericytes" = "PC",
+                                                         "Immune.cells" = "IC",
+                                                         "Smooth.Muscle" = "SMC",
+                                                         "Neuro" = "NC"))
+DO.MultipleFeature.Dotplot(seuratObj = Seu.Obj.annotated,
+                           Feature = genes_of_interest,
+                           group.by.x = "cell_type_shortened",
+                           group.by.y1 = "Human_other",
+                           group.by.y2 = "disease",
+                           colZ = F,
+                           dot.size = c(3,6),
+                           plot.margin = c(1,1,1,1),
+                           wilcox_test=T,
+                           gene_order = genes_of_interest)
+
+
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/Dotplots/MultipleFeature_plot/Human_top10_predictor_MultipleFeaturePlot_figure3d.pdf", width = 10.5, height = 5)
+```
+
+
 #3. Bar plots for top predictors in CM
 
 ```{r}
@@ -106,6 +153,54 @@ ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplo
 }
 ```
 
+
+##3.1 CM class For Figure 3b
+
+```{r}
+genes_of_interest  <- c("FGF12","PCDH7","MLIP", "TNNI3K","CTNNA3", "LDB3","ACTN2","RBFOX1","OBSCN", "ADGRB3")
+
+#reannotate cell types to make comparison
+Seu.Obj.annotated$CM_other <- plyr::revalue(Seu.Obj.annotated$cell_type,
+                                             c(`Fibroblasts` = "Other",
+                                               `Endothelial` = "Other",
+                                               `Pericytes` = "Other",
+                                               `Immune.cells` = "Other",
+                                               `Smooth.Muscle` = "Other",
+                                               `Neuro` = "Other",
+                                               `Cardiomyocytes` = "CM"))
+
+for (gene in genes_of_interest) {
+  DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated.M,
+                            Feature = gene,
+                            group.by = "CM_other",
+                            ctrl.condition = "CM",
+                            SeuV5 = F,
+                            stat_pos_mod = 1.08,
+                            wilcox_test = T,
+                            #bar_colours = c("#1f77b4","#ea7e1eff"),
+                            x_label_rotation = 0
+                            #,y_limits = c(0,2.5)
+                            )
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/Figure3/CM_class/",gene,"_CM_barplot.pdf"),
+       height = 3.5, width = 3)
+}
+
+DO.MultipleFeature.Dotplot(seuratObj = Seu.Obj.annotated,
+                           Feature = genes_of_interest,
+                           group.by.x = "disease",
+                           group.by.y1 = "CM_other",
+                           group.by.y2 = "species",
+                           colZ = F,
+                           dot.size = c(3,6),
+                           plot.margin = c(1,1,1,1),
+                           wilcox_test=T,
+                           gene_order = genes_of_interest)
+
+
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/Dotplots/MultipleFeature_plot/CM_top10_predictor_MultipleFeaturePlot_figure3d.pdf", width = 10, height = 4)
+
+```
+
 #4. Bar plots for top predictors in EC
 
 ```{r}
@@ -127,7 +222,8 @@ for (gene in genes_of_interest) {
                             SeuV5 = F,
                             stat_pos_mod = 1.03,
                             wilcox_test = T,
-                            x_label_rotation = 0
+                            x_label_rotation = 0,
+                            
                             )
 ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/",gene,"_EC_barplot.pdf"),
        height = 5, width = 3)
@@ -259,6 +355,7 @@ DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated,
                           )
 ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/FGF12_HFpEF_barplot.pdf",
        height = 6, width = 5)
+
 ```
 
 
@@ -395,9 +492,260 @@ common_DGE <- xai_DGE[(xai_DGE$Feature %in% seurat_DGE$gene),]
 common_DGE <- common_DGE[!(common_DGE$Feature %in% grep(pattern = "MT-", x = common_DGE$Feature, value = TRUE)),]
 openxlsx::write.xlsx(common_DGE,"/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/common_DGE/DGE_Human_HF_min_pct_0.1_logfc_0.1_EC_HFrEF_CTRL_XAI_SEURAT.xlsx")
 
+
+
+DO.Three.Variable.Dotplot(seuratObj = Seu.Obj.annotated,
+                          Feature = "FGF12",
+                          group.by.x = "cell_type",
+                          group.by.y1 = "disease",
+                          group.by.y2 = "species",
+                          dot.size = c(1,6))
 ```
 
-#5. try disgenet2r and ctd database + normalization of scores
+#5. Bar plots for top predictors in HFpEF
+
+```{r}
+#reannotate cell types to make comparison
+Seu.Obj.annotated$disease <- plyr::revalue(Seu.Obj.annotated$disease,c(`CTRL.LV` = "CTRL",
+                                   `CTRL.SP` = "CTRL"))
+
+Seu.Obj.annotated$HFpEF_other <- plyr::revalue(Seu.Obj.annotated$disease,
+                                             c(`HFrEF` = "Other",
+                                               `CTRL` = "Other",
+                                               `Hypertrophy` = "Other"))
+Seu.Obj.annotated$cell_type_shortened <- plyr::revalue(Seu.Obj.annotated$cell_type,
+                                                       c("Cardiomyocytes" = "CM",
+                                                         "Fibroblasts" = "FB",
+                                                         "Endothelial" = "EC",
+                                                         "Pericytes" = "PC",
+                                                         "Immune.cells" = "IC",
+                                                         "Smooth.Muscle" = "SMC",
+                                                         "Neuro" = "NC"))
+# Seu.Obj.annotated.H <- subset(Seu.Obj.annotated, subset = species == "Human")
+# Seu.Obj.annotated.M <- subset(Seu.Obj.annotated, subset = species == "Mice")
+# 
+# Seu.Obj.annotated.EC <- subset(Seu.Obj.annotated, subset = cell_type == "Endothelial")
+# Seu.Obj.annotated.EC.H <- subset(Seu.Obj.annotated.EC, subset = species == "Human")
+# Seu.Obj.annotated.EC.M <- subset(Seu.Obj.annotated.EC, subset = species == "Mice")
+
+genes_of_interest <-c("VTI1A","ABCC1","LRRK2","CLIP2","BTG2","PCNT","SUFU","LIN54","IQSEC1","SMARCC2")
+tmp <- list()
+for (gene in genes_of_interest) {
+  tmp[[gene]] <- DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated.EC.H,
+                            Feature = gene,
+                            group.by = "HFpEF_other",
+                            ctrl.condition = "HFpEF",
+                            SeuV5 = F,
+                            stat_pos_mod = 1.03,
+                            wilcox_test = T,
+                            #bar_colours = c("#1f77b4","#ea7e1eff"),
+                            x_label_rotation = 0
+                            #,y_limits = c(0,2.5),
+                            ,returnValues = T
+                            )
+#   
+# ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/Figure3/HFpEF_class/",gene,"HFpEF_barplot.pdf"), height = 3.5, width = 3)
+
+DO.Three.Variable.Dotplot(seuratObj = Seu.Obj.annotated,
+                          Feature = gene,
+                          group.by.x = "cell_type_shortened",
+                          group.by.y1 = "HFpEF_other",
+                          group.by.y2 = "species",
+                          colZ = F,
+                          dot.size = c(3,6),
+                          plot.margin = c(0.5,0.5,0.5,0.5),
+                          median = F)
+
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/Dotplots/three_variable_plot/Figure3/HFpEF_class/",gene,"_HFpEF_dotplot.pdf"), width = 7, height = 5)
+}
+
+df.rbind1 <- tmp[[1]]$df.melt.orig[tmp[[1]]$df.melt.orig$condition == "HFpEF",]
+for (i in 2:length(tmp)) {
+  df.rbind1 <- rbind(df.rbind1, tmp[[i]]$df.melt.orig[tmp[[i]]$df.melt.orig$condition == "HFpEF",])
+}
+
+
+
+
+DO.MultipleFeature.Dotplot(seuratObj = Seu.Obj.annotated,
+                           Feature = genes_of_interest,
+                           group.by.x = "cell_type_shortened",
+                           group.by.y1 = "HFpEF_other",
+                           group.by.y2 = "species",
+                           colZ = F,
+                           dot.size = c(3,6),
+                           plot.margin = c(1,1,1,1),
+                           wilcox_test=T,
+                           gene_order = genes_of_interest)
+
+
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/Dotplots/MultipleFeature_plot/HFpEF_top10_predictor_MultipleFeaturePlot_figure3d.pdf", width = 8, height = 3.5)
+
+
+
+```
+
+#. Bar plots for top predictors in HFrEF
+
+```{r}
+#reannotate cell types to make comparison
+Seu.Obj.annotated$disease <- plyr::revalue(Seu.Obj.annotated$disease,c(`CTRL.LV` = "CTRL",
+                                   `CTRL.SP` = "CTRL"))
+
+Seu.Obj.annotated$HFrEF_other <- plyr::revalue(Seu.Obj.annotated$disease,
+                                             c(`HFpEF` = "Other",
+                                               `CTRL` = "Other",
+                                               `Hypertrophy` = "Other"))
+
+Seu.Obj.annotated.H <- subset(Seu.Obj.annotated, subset = species == "Human")
+Seu.Obj.annotated.M <- subset(Seu.Obj.annotated, subset = species == "Mice")
+
+Seu.Obj.annotated.EC <- subset(Seu.Obj.annotated, subset = cell_type == "Endothelial")
+Seu.Obj.annotated.EC.H <- subset(Seu.Obj.annotated.EC, subset = species == "Human")
+Seu.Obj.annotated.EC.M <- subset(Seu.Obj.annotated.EC, subset = species == "Mice")
+
+Seu.Obj.annotated.HFrEF.CM <- subset(Seu.Obj.annotated, subset = cell_type == "Cardiomyocytes")
+Seu.Obj.annotated.HFrEF.CM.H <- subset(Seu.Obj.annotated, subset = species == "Human")
+Seu.Obj.annotated.HFrEF.CM.M <- subset(Seu.Obj.annotated, subset = species == "Mice")
+
+genes_of_interest <- c("VTI1A","ABCC1","LRRK2","CLIP2","BTG2","PCNT","SUFU","LIN54","IQSEC1","SMARCC2","RTTN")
+for (gene in genes_of_interest) {
+  DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated.HFpEF,
+                            Feature = gene,
+                            group.by = "HFrEF_other",
+                            ctrl.condition = "HFrEF",
+                            SeuV5 = F,
+                            stat_pos_mod = 1.03,
+                            wilcox_test = T,
+                            #bar_colours = c("#1f77b4","#ea7e1eff"),
+                            x_label_rotation = 0
+                            #,y_limits = c(0,2.5)
+                            )
+  
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/Figure3/HFrEF_class/",gene,"Mice_HFrEF_barplot.pdf"),
+       height = 3.5, width = 3)
+}
+
+Seu.Obj.annotated.HFrEF <- subset(Seu.Obj.annotated, subset=disease %in% c("HFrEF","CTRL"))
+AverageExpression(Seu.Obj.annotated.HFrEF,
+                  assays = "RNA",
+                  features = "FGF12",
+                  group.by = "disease")
+
+DO.Three.Variable.Dotplot(seuratObj = Seu.Obj.annotated.HFrEF,
+                          Feature = genes_of_interest[11],
+                          group.by.x = "cell_type",
+                          group.by.y1 = "disease",
+                          group.by.y2 = "species",
+                          colZ = F,
+                          dot.size = c(3,6))
+
+
+
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/Dotplots/three_variable_plot/EMCN_HFrEF_cell_type_dis_species.pdf", width = 7, height = 5)
+# here the expression of some genes do not follow a straightforward way, there is a clear split between species and cell types
+
+#first version of code for ThreeVariableplot
+library(scRNAtoolVis)
+Idents(Seu.Obj.annotated) <- "species"
+
+geneExp <- Seurat::FetchData(object = Seu.Obj.annotated, vars = genes_of_interest[3], 
+                                 slot = "data")
+geneExp$id <- paste(Seu.Obj.annotated@meta.data[["disease"]], " (", 
+                          Seu.Obj.annotated@meta.data[["species"]], ")", sep = "")
+geneExp$cell_type <- Seu.Obj.annotated@meta.data[["cell_type"]]
+
+# Modify the data.plot function to include cell_type in the grouping
+data.plot <- lapply(X = unique(geneExp$id), FUN = function(ident) {
+  data.use <- geneExp[geneExp$id == ident, ]
+  
+  lapply(X = unique(data.use$cell_type), FUN = function(celltype) {
+    data.cell <- data.use[data.use$cell_type == celltype, 1:(ncol(geneExp) - 2), drop = FALSE]
+    avg.exp <- apply(X = data.cell, MARGIN = 2, FUN = function(x) {
+      return(expm1(mean(x)))
+    })
+    pct.exp <- apply(X = data.cell, MARGIN = 2, FUN = PercentAbove, 
+                     threshold = 0)
+    
+    res <- data.frame(id = ident, celltype = celltype, avg.exp = avg.exp, pct.exp = pct.exp * 100)
+    res$gene <- rownames(res)
+    return(res)
+  }) %>% do.call("rbind", .)
+}) %>% do.call("rbind", .) %>% data.frame()
+
+data.plot$avg.exp.scaled <- log1p(data.plot$avg.exp)
+data.plot.res <- data.plot
+data.plot.res$celltype <- factor(data.plot.res$celltype, levels = unique(data.plot.res$celltype))
+data.plot.res$group <- sapply(strsplit(as.character(data.plot.res$id), 
+                                           split = "\\(|\\)"), "[", 2)
+data.plot.res$pct.exp <- ifelse(data.plot.res$pct.exp == 0, NA,data.plot.res$pct.exp) # so fraction 0 is not displayed in plot
+data.plot.res <- data.plot.res[complete.cases(data.plot.res$pct.exp),]
+pmain <- ggplot2::ggplot(data.plot.res, ggplot2::aes(x = celltype,y = id)) + ggplot2::theme_bw(base_size = 14) + 
+    ggplot2::xlab("") + ggplot2::ylab("") + ggplot2::labs(title = unique(data.plot.res$gene))+ ggplot2::coord_fixed(clip = "off") + 
+    ggplot2::theme(plot.margin = ggplot2::margin(t = plot.margin[1], 
+                                                 r = plot.margin[2],
+                                                 b = plot.margin[3],
+                                                 l = plot.margin[4], 
+                                                 unit = "cm"),
+                   axis.text = ggplot2::element_text(color = "black"),
+                   legend.direction = "horizontal",
+                   axis.text.x = element_text(color = "black",angle = 90,hjust = 1,vjust = 0.5, size = 14, family = "Helvetica"),
+                   axis.text.y = element_text(color = "black", size = 14, family = "Helvetica"),
+                   axis.title.x = element_text(color = "black", size = 14, family = "Helvetica"),
+                   axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+                   plot.title = element_text(size = 14, hjust = 0.5,face="bold", family = "Helvetica"),
+                   plot.subtitle = element_text(size = 14, hjust = 0, family = "Helvetica"),
+                   axis.line = element_line(color = "black"),
+                   strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+                   legend.text = element_text(size = 14, color = "black", family = "Helvetica"),
+                   legend.title = element_text(size = 14, color = "black", family = "Helvetica", hjust =0.5),
+                   legend.position = "right",
+                   panel.grid.major = element_blank(),
+                   panel.grid.minor = element_blank(),)
+                   # axis.text.x = ggplot2::element_text(angle = 90,
+                   #                                     hjust = 1,
+                   #                                     vjust = 0),
+                                     
+
+
+colorbar.layer <- ggplot2::guides(fill = ggplot2::guide_colorbar(title = "Mean expression \n in group",
+                                                                 title.position = "top",
+                                                                 title.hjust = 0.5,
+                                                                 barwidth = unit(4.5,"cm"),
+                                                                 frame.colour = "black",
+                                                                 frame.linewidth = 0.8,
+                                                                 ticks.colour = "black"))
+
+point.layer <- ggplot2::guides(size = ggplot2::guide_legend(title = "Fraction of cells \n in group (%)", 
+                                                              title.position = "top", title.hjust = 0.5, label.position = "bottom", 
+                                                              override.aes = list(color = "black", fill = "grey50"), 
+                                                              keywidth = ggplot2::unit(0.3, "cm")))
+dot.col = c("white","#990000")
+if (length(dot.col) == 2) {
+  pmain <- pmain + ggplot2::scale_fill_gradient(low = dot.col[1],high = dot.col[2])
+  }else
+    {
+  pmain <- pmain + ggplot2::scale_fill_gradient2(low = dot.col[1],
+                                                 mid = dot.col[2],
+                                                 high = dot.col[3],
+                                                 midpoint = midpoint)
+    }
+pmain <- pmain + 
+  ggplot2::geom_point(ggplot2::aes(fill = avg.exp.scaled,
+                                   size = pct.exp),
+                      color = "black",
+                      shape = 21) +
+  colorbar.layer +
+  point.layer +
+  ggplot2::scale_size(range = c(1,6), )
+
+pmain
+  
+
+
+```
+
+#6. try disgenet2r and ctd database + normalization of scores
 ```{r}
 library(disgenet2r)
 api_key <- "c5453f53-ce67-47ff-95e1-92bc4534e112"
@@ -455,7 +803,7 @@ openxlsx::write.xlsx(tab_HF_disgenet_ctd, "/media/Helios_scStorage/Mariano/NN_Hu
 ```
 
 
-##5.1 Score calculations for each DEG list and comparison to seurat 
+##6.1 Score calculations for each DEG list and comparison to seurat 
 
 ```{r}
 #read in the combined excelsheet
@@ -553,7 +901,7 @@ ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/scatterplots/
 dev.off()
 ```
 
-##5.2 HPA cell type specific DEGs analysis
+##6.2 HPA cell type specific DEGs analysis
 
 ```{r}
 HPA_nTPM <- read.delim2(file = "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/HPA_single_cell_tpm/rna_single_cell_type_tissue.tsv", sep = "\t", header = TRUE)
@@ -687,7 +1035,7 @@ ggplot(density_df_numbers, aes(x=value, fill=Tool))+
 ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_HPA/Seurat_XAI_CM_unique_genes_density_df_numbers.pdf", height = 4, width = 7)
 ```
 
-##5.3 DEGs cell type specific in regards of our data
+##6.3 DEGs cell type specific in regards of our data
 
 ```{r}
 #try with human HFrEF DEGs
@@ -768,7 +1116,7 @@ for (genes in xai_DGE_genes$Feature) {
 ```
 
 
-#6. Benchmark with Seurat tools and XAI using the disgenet GDA scores
+#7. Benchmark with Seurat tools and XAI using the disgenet GDA scores
 
 ```{r}
 
@@ -778,9 +1126,10 @@ tab_HF <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Pap
 seurat_DGE <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_COMPLETE_withRANDOM_Human_HF_min_pct_0.1_logfc_0.1.xlsx")
 
 # avgExp threshodl 0.1
-xai_path <- "/media/Storage/anndata_shap/Z_SHAP/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5_avgExp_0.1/"
+xai_path <- "/media/Storage/anndata_shap/Z_SHAP/background_200_balanced_data/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5_avgExp_0.1/"
 result_list <- list()
-test.Seurat <- c("wilcox","wilcox_limma","bimod","t","negbinom","poisson","LR","MAST","roc","DESeq2","Random")
+test.Seurat <- c("wilcox","t")
+gene_count <- 2000
 for (disease in unique(seurat_DGE$disease)) {
   seu_DGE_dis <- seurat_DGE[seurat_DGE$disease == disease,]
 
@@ -803,12 +1152,37 @@ for (disease in unique(seurat_DGE$disease)) {
     #Load in XAI
     xai_DGE <- openxlsx::read.xlsx(paste0(xai_path,"t_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx"))
     
-    norm_score_xai <- sum(tab_HF[tab_HF$gene_symbol %in% xai_DGE$Feature,]$score) / length(xai_DGE$Feature)
-    result_list[["XAI"]][[disease]][[celltype_xai]][["norm_score_all"]] <- norm_score_xai
+    # xai_DGE <- xai_DGE[order(xai_DGE$p_adj, decreasing = F),]
+    xai_DGE <- xai_DGE[order(abs(xai_DGE$avg_cube_root_FC),decreasing = T),]
+    xai_DGE <- xai_DGE[1:gene_count,] # take 2000 genes
+    
+    
+    
+    # norm_score_xai <- sum(tab_HF[tab_HF$gene_symbol %in% xai_DGE$Feature,]$score) / length(xai_DGE$Feature)
+    norm_score_xai <- sum(tab_HF[tab_HF$gene_symbol %in% xai_DGE$Feature,]$score)
+
+    result_list[["XAI_T"]][[disease]][[celltype_xai]][["norm_score_all"]] <- norm_score_xai
+
+    #Load in XAI
+    xai_DGE <- openxlsx::read.xlsx(paste0(xai_path,"wilcoxon_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx"))
+
+    # xai_DGE <- xai_DGE[order(xai_DGE$p_adj, decreasing = F),]
+    xai_DGE <- xai_DGE[order(abs(xai_DGE$avg_cube_root_FC),decreasing = T),]
+    xai_DGE <- xai_DGE[1:gene_count,] # take 2000 genes
+
+    # norm_score_xai <- sum(tab_HF[tab_HF$gene_symbol %in% xai_DGE$Feature,]$score) / length(xai_DGE$Feature)
+    norm_score_xai <- sum(tab_HF[tab_HF$gene_symbol %in% xai_DGE$Feature,]$score)
+
+    result_list[["XAI_Wilcox"]][[disease]][[celltype_xai]][["norm_score_all"]] <- norm_score_xai
     
     for (tests in test.Seurat) {
       seu_DGE_dis_cell_test <- seu_DGE_dis_cell[seu_DGE_dis_cell$testmethod == tests,]
-      norm_score_seu <- sum(tab_HF[tab_HF$gene_symbol %in% seu_DGE_dis_cell_test$gene,]$score) / length(seu_DGE_dis_cell_test$gene)
+      
+      # seu_DGE_dis_cell_test <- seu_DGE_dis_cell_test[order(seu_DGE_dis_cell_test$p_val_adj, decreasing = F),]
+      seu_DGE_dis_cell_test <- seu_DGE_dis_cell_test[order(abs(seu_DGE_dis_cell_test$avg_log2FC), decreasing = T),]
+      seu_DGE_dis_cell_test <- seu_DGE_dis_cell_test[1:gene_count,]
+
+      norm_score_seu <- sum(tab_HF[tab_HF$gene_symbol %in% seu_DGE_dis_cell_test$gene,]$score)
       result_list[[tests]][[disease]][[celltype_xai]][["norm_score_all"]] <- norm_score_seu
     }
   }
@@ -834,47 +1208,83 @@ df.result_list <- pivot_longer(wide.df, cols = everything(), names_to = c("Tool"
 
 #openxlsx::write.xlsx(df.result_list,"/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Score_table_comb/SHAP_tresh_0.1_log_0.5_avgExp_0.1/df_result_list_all_tests.xlsx")
 
-# for Hypertrophy
-df.result_list.AS <- df.result_list[df.result_list$Disease == "Hypertrophy",]
+# set disease 
+disease <- "Hypertrophy"
+
+df.result_list.dis <- df.result_list[df.result_list$Disease == disease,]
 
 
 theme_box <- function(){
   theme_bw() +
     theme(
       panel.border = element_rect(colour = "black", fill = NA, size = 1),
-      panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(),
+      # panel.grid.major = element_blank(),
+      # panel.grid.minor = element_blank(),
+      panel.grid.major = element_line(colour = "grey90", linetype = "dotted"),
+      panel.grid.minor = element_line(colour = "grey90", linetype = "dotted"),
+      # strip.placement = "outside",
+      # axis.ticks.x = element_blank(),
       axis.line = element_line(colour = "black")
     )
 }
 
-df.result_list.AS$Tool <- factor(df.result_list.AS$Tool, levels = c("XAI", "wilcox", "wilcox_limma","bimod","t","negbinom","poisson","LR","MAST","roc","DESeq2","Random"))
+unique(df.result_list.dis$Tool)
+df.result_list.dis$Tool <- plyr::revalue(df.result_list.dis$Tool,
+                                  c("wilcox" = "Wilcox",
+                                    "t" = "t-test",
+                                    "XAI_T" = "XAI_t-test"))
+unique(df.result_list.dis$Tool)
+df.result_list.dis$Tool <- factor(df.result_list.dis$Tool, levels = c("XAI_t-test","XAI_Wilcox","Wilcox","t-test"))
 
 #exclude Neurons because of too small cell numbers
-df.result_list.AS <- df.result_list.AS[df.result_list.AS$Cell_Type != "Neuro",]
+# df.result_list.dis <- df.result_list.dis[df.result_list.dis$Cell_Type != "Neuro",]
 
-dot_colours <- c("royalblue","#2c2cb4","#bb0099","maroon", "tomato", "#b35900", "#236e00", "#7ad500", "#881800", "#004655","#6fa9a9","#DAA520")
-ggplot(df.result_list.AS, aes(x=Cell_Type, y=value, shape=Tool, color=Tool))+
+dot_colours <- c("royalblue","maroon","#bb0099","#2c2cb4", "tomato", "#b35900", "#236e00", "#7ad500", "#881800", "#004655","#6fa9a9","#DAA520")
+
+dot_colours <- c("maroon","maroon","#2F4F4F","#2F4F4F", "tomato", "#b35900", "#236e00", "#7ad500", "#881800", "#004655","#6fa9a9","#DAA520")
+
+df.result_list.dis$Group <- ifelse(grepl("t-test", df.result_list.dis$Tool),"t-test", "Wilcoxon")
+df.result_list.dis$Group <- factor(df.result_list.dis$Group, levels = c("Wilcoxon","t-test"))
+ggplot(df.result_list.dis, aes(x=Group, y=value, shape=Tool, color=Tool, group=Group))+
   geom_point(aes(shape=Tool, size=Tool))+
   theme_box() +
-  scale_color_manual(labels=unique(df.result_list.AS$Tool), values =  dot_colours)+
-  scale_shape_manual(labels=unique(df.result_list.AS$Tool), values = c(1,2,3,4,5,6,7,8,9,10,11,12,13))+
-  scale_size_manual(labels=unique(df.result_list.AS$Tool), values = rep(c(4,4),6))+
-  labs(title = "Human - Hypertrophy vs healthy", y = "Normalized GDA scores") +
-  theme(axis.text.x = element_text(color = "black",angle = 45,hjust = 1, size = 14, family = "Helvetica"),
+  facet_grid(~Cell_Type, scales = "free")+
+  scale_color_manual(name="Value Type",
+                     labels=c("XAI_t-test" = "Shapley",
+                              "XAI_Wilcox" = "Shapley",
+                              "Wilcox" = "Expression",
+                              "t-test" = "Expression"),
+                     values =  dot_colours)+
+  scale_shape_manual(name="Value Type",
+                     labels=c("XAI_t-test" = "Shapley",
+                              "XAI_Wilcox" = "Shapley",
+                              "Wilcox" = "Expression",
+                              "t-test" = "Expression"),
+                     values = c(17,17,16,16))+
+  scale_size_manual(name="Value Type",
+                    labels=c("XAI_t-test" = "Shapley",
+                             "XAI_Wilcox" = "Shapley",
+                             "Wilcox" = "Expression",
+                             "t-test" = "Expression"),
+                    values = c(4,4,4,4))+
+  labs(title = paste0("Human - ", disease," vs healthy"), y = "Cummulative\n GDA Score", hjust=0.5) +
+  theme(axis.text.x = element_text(color = "black", size = 14,angle = 45,hjust = 1, family = "Helvetica"),
         axis.text.y = element_text(color = "black", size = 14, family = "Helvetica"),
         axis.title.x = element_blank(),
         axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
         plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
         axis.line = element_line(color = "black"),
         strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
-        legend.position = "right")
-
-ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/scatterplots/.pdf", width = 6.5, height = 5)
+        legend.text = element_text(size = 10, color = "black", family = "Helvetica"),
+        legend.title = element_text(size = 10, color = "black", family = "Helvetica", face = "bold", hjust =0.5),
+        panel.spacing = unit(0, "lines"))
+  # + ggprism::annotation_ticks(sides = "lrbt", type = "major", outside = F)
+        
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/scatterplots/Figure4/Human_",disease,"_healthy_",gene_count,"_genes_sort_foldchange.pdf"), width = 12, height = 3.5)
 dev.off()
 ```
 
-#7. Benchmark with Seurat tools and XAI using the disgenet gene names and making a line increasing with hits
+#8. Benchmark with Seurat tools and XAI using the disgenet gene names and making a line increasing with hits
 
 ```{r}
 #read in the combined excelsheet
@@ -883,14 +1293,16 @@ tab_HF <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Pap
 seurat_DGE <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_COMPLETE_withRANDOM_Human_HF_min_pct_0.1_logfc_0.1.xlsx")
 
 # avgExp threshodl 0.1
-xai_path <- "/media/Storage/anndata_shap/Z_SHAP/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5_avgExp_0.1/"
-test.Seurat <- c("wilcox","wilcox_limma","bimod","t","negbinom","poisson","LR","MAST","roc","DESeq2","Random")
-
+xai_path <- "/media/Storage/anndata_shap/Z_SHAP/background_200_balanced_data/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5_avgExp_0.1/"
+test.Seurat <- c("wilcox","t","Random")
+# test.Seurat <- c("wilcox")
 #for Hypertrophy CM
-for (disease in "Hypertrophy") {
-  seu_DGE_dis <- seurat_DGE[seurat_DGE$disease == disease,]
 
-    for (celltype in c("Endothelial")) {
+gene_count <- 2000 # how many genes
+for (disease in "HFpEF") {
+  seu_DGE_dis <- seurat_DGE[seurat_DGE$disease == disease,]
+    collector_list <- list()
+    for (celltype in unique(seurat_DGE$celltype)) {
     seu_DGE_dis_cell <- seu_DGE_dis[seu_DGE_dis$celltype == celltype,]
     
     #some naming stuff for finding the right xai DGE file
@@ -906,20 +1318,238 @@ for (disease in "Hypertrophy") {
     if (celltype_xai  == "Immune.cells") {celltype_xai <- "ImmuneCells"}
     if (celltype_xai  == "Smooth.Muscle") {celltype_xai <- "SmoothMuscle"}
     
-    #Load in XAI
+    #Load in XAI-t
+    xai_DGE <- openxlsx::read.xlsx(paste0(xai_path,"t_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx"))
+    
+    # xai_DGE <- xai_DGE[order(xai_DGE$p_adj, decreasing = F),]
+    xai_DGE <- xai_DGE[order(abs(xai_DGE$avg_cube_root_FC), decreasing = T),]
+
+    #collector list for p-adj sorted gene names
+    list_genes_tool <- list(XAI_T = xai_DGE$Feature[1:gene_count])
+
+    #Load in XAI-wilcoxon
+    xai_DGE <- openxlsx::read.xlsx(paste0(xai_path,"wilcoxon_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx"))
+
+    # xai_DGE <- xai_DGE[order(xai_DGE$p_adj, decreasing = F),]
+    xai_DGE <- xai_DGE[order(abs(xai_DGE$avg_cube_root_FC), decreasing = T),]
+    list_genes_tool[["XAI_Wilcox"]] <- xai_DGE$Feature[1:gene_count]
+    
+    for (tests in test.Seurat) {
+      seu_DGE_dis_cell_test <- seu_DGE_dis_cell[seu_DGE_dis_cell$testmethod == tests,]
+      # seu_DGE_dis_cell_test <- seu_DGE_dis_cell_test[order(seu_DGE_dis_cell_test$p_val_adj, decreasing = F),]
+      seu_DGE_dis_cell_test <- seu_DGE_dis_cell_test[order(abs(seu_DGE_dis_cell_test$avg_log2FC), decreasing = T),]
+
+      list_genes_tool[[tests]] <- seu_DGE_dis_cell_test$gene[1:gene_count]
+    }
+  collector_list[[celltype]] <- list_genes_tool}
+}
+
+# Function to calculate cumulative steps
+calculate_cumulative_step <- function(gene_list, reference_list) {
+  step_data <- as.integer(gene_list %in% reference_list)
+  cumulative_step <- cumsum(step_data)
+  return(cumulative_step)
+}
+
+# Function to calculate cumulative steps
+calculate_cumulative_step_GDA <- function(gene_list, reference) {
+  # Score defnition in same order as found genes
+  found_genes <- gene_list[gene_list %in% reference$gene_symbol]
+  scores <- reference[reference$gene_symbol %in% found_genes,]
+  scores <- scores[order(match(scores$gene_symbol,found_genes)),]$score
+  
+  # Step data
+  step_data <- as.integer(gene_list %in% reference$gene_symbol)
+  score_idx <- 1
+  # Replace each 1 value from scores
+  step_data <- sapply(step_data, function(x) {
+    if (x == 1) {
+      val <- scores[score_idx]
+      score_idx <<- score_idx + 1
+      return(val)
+    } else {
+      return(x)
+    }
+  })
+  
+  cumulative_step <- cumsum(step_data)
+  return(cumulative_step)
+}
+
+
+# # Combine results into a single data frame
+# df_combined <- do.call(rbind, lapply(names(list_genes_tool), function(list_name) {
+#   gene_list <- list_genes_tool[[list_name]]
+#   cumulative_step <- calculate_cumulative_step(gene_list, tab_HF$gene_symbol)
+#   data.frame(Tool = list_name, rank = 1:length(gene_list), cumulative_step)
+# }))
+
+###
+df_combined_all_celltypes <- list()
+
+# Loop through each cell type in the collector list
+for (cell_type in names(collector_list)) {
+  
+  gene_lists_for_cell_type <- collector_list[[cell_type]]
+  # Combine results for the current cell type
+  df_combined_celltype <- do.call(rbind, lapply(names(gene_lists_for_cell_type), function(list_name) {
+    gene_list <- gene_lists_for_cell_type[[list_name]]
+    # cumulative_step <- calculate_cumulative_step(gene_list, tab_HF$gene_symbol)
+    cumulative_step <- calculate_cumulative_step_GDA(gene_list, tab_HF)
+    data.frame(CellType = cell_type, Tool = list_name, rank = 1:length(gene_list), cumulative_step)
+  }))
+  df_combined_all_celltypes[[cell_type]] <- df_combined_celltype
+}
+
+# Combine the data frames for all cell types into a single data frame
+df_combined_final <- do.call(rbind, df_combined_all_celltypes)
+rownames(df_combined_final) <- NULL
+###
+
+theme_box_step_plot <- function(){
+  theme_bw() +
+    theme(
+      panel.border = element_rect(colour = "black", fill = NA, size = 1),
+      panel.grid.major = element_line(colour = "grey", linetype = "dotted"),
+      panel.grid.minor = element_line(colour = "grey", linetype = "dotted"),
+      axis.line = element_line(colour = "black"),
+      # legend.background = element_rect(colour = "grey", fill = "white"),
+      # legend.box.background = element_rect(colour = "grey", size = 0.5),
+    )
+}
+
+line_colours <- c("royalblue","#2c2cb4","#bb0099","maroon", "tomato", "#b35900", "#236e00", "#7ad500", "#881800", "#004655","#6fa9a9","#DAA520","darkgrey")
+line_types <- rep(c("dashed","dashed","solid","solid","solid"),12)
+
+unique(df_combined_final$Tool)
+df_combined_final$Tool <- plyr::revalue(df_combined_final$Tool,
+                                  c("XAI_T"="XAI_t-test",
+                                    "wilcox" = "Wilcox",
+                                    "wilcox_limma" = "Wilcox_limma",
+                                    "t" = "t-test",
+                                    "poisson" = "Poisson",
+                                    "LR" = "LogReg",
+                                    "roc" = "ROC",
+                                    "Random" = "random"))
+
+
+# df_combined$Tool <- factor(df_combined$Tool, levels = c("XAI_t-test","XAI_Wilcox","Wilcox","Wilcox_limma","bimod","t-test","negbinom", "Poisson","LogReg","MAST","ROC","DESeq2","random"))
+
+df_combined_final$Tool <- factor(df_combined_final$Tool, levels = c("XAI_Wilcox","XAI_t-test","Wilcox","t-test","random"))
+
+#check if values are plotted correctly to the right tool
+# max(df_combined[df_combined$Tool == "MAST" & df_combined$rank <= 2000,]$cumulative_step)
+
+ggplot(df_combined_final, aes(x = rank, y = cumulative_step, color = Tool, group = Tool, linetype = Tool))+
+  geom_step(alpha=0.8, linewidth=1) +
+  #geom_abline(intercept = 0, slope = 0.02, color="grey",linetype = "dashed", size = 1)+
+  theme_box_step_plot() +
+  # xlim(0,2000)+
+  # ylim(0,80)+
+  facet_grid(~CellType, scales = "free")+
+  scale_color_manual(labels = levels(df_combined_final$Tool), values = line_colours)+
+  scale_linetype_manual(labels = levels(df_combined_final$Tool), values = line_types) +
+  labs(title = paste0("Human - ", disease, " vs healthy"), y = "HF associated gda score", x = "Rank of DEG") +
+  theme(axis.text.x = element_text(color = "black",angle = 45,hjust = 1, size = 14, family = "Helvetica"),
+        axis.text.y = element_text(color = "black", size = 14, family = "Helvetica"),
+        axis.title.x = element_text(color = "black", size = 14, family = "Helvetica"),
+        axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+        plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
+        plot.subtitle = element_text(size = 14, hjust = 0, family = "Helvetica"),
+        axis.line = element_line(color = "black"),
+        strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+        legend.text = element_text(size = 10, color = "black", family = "Helvetica"),
+        legend.title = element_text(size = 10, color = "black", family = "Helvetica", face = "bold", hjust =0.5),
+        legend.justification = c("right", "bottom"),
+        legend.box.just = "right",
+        legend.key.width = unit(1.2, "cm"), # Adjust the width of the legend keys
+        legend.margin = margin(6, 6, 6, 6),
+        panel.spacing = unit(0, "lines")) 
+
+# ggarrange(p_Card,p_End, p_Fib, p_Imm, p_Pec, p_SMC, ncol = 3, nrow = 2)
+
+# ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/stepplot/Human_",celltype,"_",disease,"_CTRL_ranks_sort_padj.pdf"), width = 9, height = 9)
+
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/stepplot/HFpEF_celltypes_combined_2000_ranks_by_FC_GDAsum.pdf", width = 15, height = 4)
+
+```
+
+##8.1 Benchmark with Seurat tools and XAI using the disgenet gene names and making a line increasing with hits
+
+```{r}
+#read in the combined excelsheet
+tab_HF <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/disgenet_tables/combined/genes_HF_disgenet_ctd.xlsx")
+
+seurat_DGE <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_COMPLETE_withRANDOM_Human_HF_min_pct_0.1_logfc_0.1.xlsx")
+
+# avgExp threshodl 0.1
+xai_path <- "/media/Storage/anndata_shap/Z_SHAP/background_200_balanced_data/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5_avgExp_0.1/"
+test.Seurat <- c("wilcox","t","Random")
+# test.Seurat <- c("wilcox")
+#for Hypertrophy CM
+for (disease in "HFpEF") {
+  seu_DGE_dis <- seurat_DGE[seurat_DGE$disease == disease,]
+    
+  list_cell_genes <- list()
+  for (celltype in unique(seu_DGE_dis$celltype)) {
+    seu_DGE_dis_cell <- seu_DGE_dis[seu_DGE_dis$celltype == celltype,]
+    
+    #some naming stuff for finding the right xai DGE file
+    class_xai <- switch(disease,
+                        "Hypertrophy" = "class_9",
+                        "HFpEF" = "class_10",
+                        "HFrEF" = "class_11",
+                        NULL)
+    #Some adjustments because of file names...
+    disease_xai <- disease
+    celltype_xai <- celltype
+    if (disease_xai == "Hypertrophy") {disease_xai <- "AS"}
+    if (celltype_xai  == "Immune.cells") {celltype_xai <- "ImmuneCells"}
+    if (celltype_xai  == "Smooth.Muscle") {celltype_xai <- "SmoothMuscle"}
+    
+    #Load in XAI-t
     xai_DGE <- openxlsx::read.xlsx(paste0(xai_path,"t_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx"))
     
     xai_DGE <- xai_DGE[order(xai_DGE$p_adj, decreasing = F),]
+    # xai_DGE <- xai_DGE[order(abs(xai_DGE$avg_cube_root_FC), decreasing = T),]
+   # xai_DGE <- xai_DGE[order(abs(xai_DGE$mean_SHAP_group1 - xai_DGE$mean_SHAP_group2), decreasing = T),]
+
     #collector list for p-adj sorted gene names
-    list_genes_tool <- list(XAI = xai_DGE$Feature)
+    list_genes_tool <- list(XAI_T = xai_DGE$Feature)
+
+    #Load in XAI-wilcoxon
+    xai_DGE <- openxlsx::read.xlsx(paste0(xai_path,"wilcoxon_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx"))
+
+    xai_DGE <- xai_DGE[order(xai_DGE$p_adj, decreasing = F),]
+    # xai_DGE <- xai_DGE[order(abs(xai_DGE$avg_cube_root_FC), decreasing = T),]
+    list_genes_tool[["XAI_Wilcox"]] <- xai_DGE$Feature
     
     for (tests in test.Seurat) {
       seu_DGE_dis_cell_test <- seu_DGE_dis_cell[seu_DGE_dis_cell$testmethod == tests,]
       seu_DGE_dis_cell_test <- seu_DGE_dis_cell_test[order(seu_DGE_dis_cell_test$p_val_adj, decreasing = F),]
+      # seu_DGE_dis_cell_test <- seu_DGE_dis_cell_test[order(abs(seu_DGE_dis_cell_test$avg_log2FC), decreasing = T),]
+
       list_genes_tool[[tests]] <- seu_DGE_dis_cell_test$gene
     }
+    list_cell_genes[[celltype_xai]] <- list_genes_tool
   }
+
 }
+
+
+list_result <- list()
+for (celltype in names(list_cell_genes)) {
+  # Combine results into a single data frame
+  df_combined <- do.call(rbind, lapply(names(list_genes_tool), function(list_name) {
+    gene_list <- list_genes_tool[[list_name]]
+    cumulative_step <- calculate_cumulative_step(gene_list, tab_HF$gene_symbol)
+    data.frame(Tool = list_name, rank = 1:length(gene_list), cumulative_step)
+    list_result[[celltype]] <- df_combined
+}))
+
+}
+wide.df <- as.data.frame(flatten_list(list_genes_tool))
+df.result_list <- pivot_longer(wide.df, cols = everything(), names_to = c("Tool","Disease","Cell_Type", "Metric"), names_sep = "\\.")
 
 # Function to calculate cumulative steps
 calculate_cumulative_step <- function(gene_list, reference_list) {
@@ -947,11 +1577,13 @@ theme_box_step_plot <- function(){
     )
 }
 
-line_colours <- c("royalblue","#2c2cb4","#bb0099","maroon", "tomato", "#b35900", "#236e00", "#7ad500", "#881800", "#004655","#6fa9a9","#DAA520")
+line_colours <- c("royalblue","#2c2cb4","#bb0099","maroon", "tomato", "#b35900", "#236e00", "#7ad500", "#881800", "#004655","#6fa9a9","#DAA520","darkgrey")
 line_types <- rep(c("solid","dashed"),12)
 
+unique(df_combined$Tool)
 df_combined$Tool <- plyr::revalue(df_combined$Tool,
-                                  c("wilcox" = "Wilcox",
+                                  c("XAI_T"="XAI_t-test",
+                                    "wilcox" = "Wilcox",
                                     "wilcox_limma" = "Wilcox_limma",
                                     "t" = "t-test",
                                     "poisson" = "Poisson",
@@ -959,28 +1591,33 @@ df_combined$Tool <- plyr::revalue(df_combined$Tool,
                                     "roc" = "ROC",
                                     "Random" = "random"))
 
-df_combined$Tool <- factor(df_combined$Tool, levels = c("XAI","Wilcox","Wilcox_limma","bimod","t-test","negbinom", "Poisson","LogReg","MAST","ROC","DESeq2","random"))
 
+df_combined$Tool <- factor(df_combined$Tool, levels = c("XAI_t-test","XAI_Wilcox","Wilcox","Wilcox_limma","bimod","t-test","negbinom", "Poisson","LogReg","MAST","ROC","DESeq2","random"))
+
+df_combined$Tool <- factor(df_combined$Tool, levels = c("XAI_Wilcox","XAI_t-test","Wilcox","t-test","random"))
+
+#check if values are plotted correctly to the right tool
+# max(df_combined[df_combined$Tool == "MAST" & df_combined$rank <= 2000,]$cumulative_step)
 
 ggplot(df_combined, aes(x = rank, y = cumulative_step, color = Tool, group = Tool, linetype = Tool))+
   geom_step(alpha=0.8, linewidth=1) +
   #geom_abline(intercept = 0, slope = 0.02, color="grey",linetype = "dashed", size = 1)+
   theme_box_step_plot() +
   xlim(0,2000)+
-  ylim(0,70)+
-  scale_color_manual(labels = unique(df_combined$Tool), values = line_colours)+
-  scale_linetype_manual(labels = unique(df_combined$Tool), values = line_types) +
-  labs(title = "Human EC - Hypertrophy vs healthy", y = "HF associated gene detected", x = "Rank of DEG") +
-  theme(axis.text.x = element_text(color = "black",angle = 0,hjust = 1, size = 14, family = "Helvetica"),
-        axis.text.y = element_text(color = "black", size = 14, family = "Helvetica"),
-        axis.title.x = element_text(color = "black", size = 14, family = "Helvetica"),
-        axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
-        plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
-        plot.subtitle = element_text(size = 14, hjust = 0, family = "Helvetica"),
+  ylim(0,60)+
+  scale_color_manual(labels = levels(df_combined$Tool), values = line_colours)+
+  scale_linetype_manual(labels = levels(df_combined$Tool), values = line_types) +
+  labs(title = paste0("Human ",celltype," - ", disease, " vs healthy"), y = "HF associated gene detected", x = "Rank of DEG") +
+  theme(axis.text.x = element_text(color = "black",angle = 0,hjust = 1, size = 18, family = "Helvetica"),
+        axis.text.y = element_text(color = "black", size = 18, family = "Helvetica"),
+        axis.title.x = element_text(color = "black", size = 18, family = "Helvetica"),
+        axis.title = element_text(size = 18, color = "black", family = "Helvetica"),
+        plot.title = element_text(size = 18, hjust = 0.5, family = "Helvetica"),
+        plot.subtitle = element_text(size = 18, hjust = 0, family = "Helvetica"),
         axis.line = element_line(color = "black"),
-        strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
-        legend.text = element_text(size = 14, color = "black", family = "Helvetica"),
-        legend.title = element_text(size = 14, color = "black", family = "Helvetica", face = "bold", hjust =0.5),
+        strip.text.x = element_text(size = 18, color = "black", family = "Helvetica"),
+        legend.text = element_text(size = 16, color = "black", family = "Helvetica"),
+        legend.title = element_text(size = 16, color = "black", family = "Helvetica", face = "bold", hjust =0.5),
         legend.position = c(0.99,0.01),
         legend.justification = c("right", "bottom"),
         legend.box.just = "right",
@@ -988,6 +1625,892 @@ ggplot(df_combined, aes(x = rank, y = cumulative_step, color = Tool, group = Too
         legend.margin = margin(6, 6, 6, 6)) +
 guides(color = guide_legend(ncol = 2))
 
-ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/stepplot/Human_EC_Hypertrophy_CTRL_ranks.pdf", width = 9, height = 9)
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/stepplot/Human_",celltype,"_",disease,"_CTRL_ranks_sort_padj.pdf"), width = 9, height = 9)
+```
+
+#9. Redo truncated KS-p-value calculations
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(magrittr)
+
+seurat_DGE <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_COMPLETE_withRANDOM_Human_HF_min_pct_0.1_logfc_0.1.xlsx")
+
+#read in the combined excelsheet
+tab_HF <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/disgenet_tables/combined/genes_HF_disgenet_ctd.xlsx")
+tab_HF %<>% dplyr::arrange(desc(score))
+ref_genes <- tab_HF$gene_symbol
+ref_weight.1 <- tab_HF$score
+Known_disease_genes <- ref_genes
+Known_disease_genes_weight <- ref_weight.1
+names(Known_disease_genes_weight) <- Known_disease_genes
+# library(readr)
+# dbf<-read_lines(paste0(standard_positive_dir,'GO_Biological_Process_2021.txt'))
+# dbl<-sapply(1:length(dbf),FUN=function(x){
+#   rt<-str_split(dbf[x],pattern='\t')[[1]]
+# })
+# names(dbl)=sapply(dbl,FUN=function(x){x[1]})
+# dbl2<-sapply(names(dbl),FUN=function(x){
+#   setdiff(dbl[[x]],c(x,''))
+# })
+# Standard_Positive_gene_COVID19<-dbl2$`defense response to virus (GO:0051607)`
+# Standard_Positive_gene_COVID19_weight<-rep(1,length(Standard_Positive_gene_COVID19))
+# names(Standard_Positive_gene_COVID19_weight)=Standard_Positive_gene_COVID19
+
+
+ks.test.truncated <- function (x, w.x=NULL, y,..., alternative = c("two.sided", "less", "greater"), exact = NULL, maxCombSize=10000,y.min, y.max) {
+  alternative <- match.arg(alternative)
+  DNAME <- deparse(substitute(x))
+  x <- x[!is.na(x)]
+  n <- length(x)
+  if (n < 1L) 
+    stop("not enough 'x' data")
+  PVAL <- NULL
+  {
+    if (is.character(y)) 
+      y <- get(y, mode = "function", envir = parent.frame())
+    if (!is.function(y)) 
+      stop("'y' must be a function or a string naming a valid function")
+    METHOD <- "One-sample Kolmogorov-Smirnov test"
+    TIES <- FALSE
+    if (length(unique(x)) < n) {
+      warning("ties should not be present for the Kolmogorov-Smirnov test")
+      TIES <- TRUE
+    }
+    if (is.null(exact)) 
+      exact <- (n < 100) && !TIES
+    if(is.null(w.x)){
+      w.x<-rep(1,length(x))
+    }
+    names(w.x)=x
+    x%<>%as.vector()
+    
+    # x <- y(sort(x), ...) - (0:(n - 1))/n   
+    x.vec<-punif(sort(x),min=y.min,max=y.max)
+    
+    w.x.vec<-w.x[as.character(sort(x))]%>%as.vector()
+    x.substitution<-c(0,cumsum(w.x.vec))/sum(w.x.vec)# 
+    
+    x<-x.vec-x.substitution[1:(length(x.substitution)-1)]
+    STATISTIC <- switch(alternative, two.sided = max(c(x, 
+                                                       x.substitution[2:length(x.substitution)]-x.vec)), greater = max(x.substitution[2:length(x.substitution)]-x.vec), less = max(x))
+    
+    if (exact) {
+      PVAL <- 1 - if (alternative == "two.sided")
+        result = tryCatch({
+          .C(C_pkolmogorov2x, p = as.double(STATISTIC), 
+             as.integer(n), PACKAGE = "stats")$p
+        }, warning = function(w) {
+          warning(w)
+        }, error = function(e) {
+          .Call(C_pKolmogorov2x, STATISTIC, n)
+        }, finally = {
+        })
+      
+      else {
+        pkolmogorov1x <- function(x, n) {
+          if (x <= 0) 
+            return(0)
+          if (x >= 1) 
+            return(1)
+          j <- seq.int(from = 0, to = floor(n * (1 - 
+                                                   x)))
+          1 - x * sum(exp(lchoose(n, j) + (n - j) * log(1 - 
+                                                          x - j/n) + (j - 1) * log(x + j/n)))
+        }
+        pkolmogorov1x(STATISTIC, n)
+      }
+    }
+    nm_alternative <- switch(alternative, two.sided = "two-sided", 
+                             less = "the CDF of x lies below the null hypothesis", 
+                             greater = "the CDF of x lies above the null hypothesis")
+  }
+  names(STATISTIC) <- switch(alternative, two.sided = "D", 
+                             greater = "D^+", less = "D^-")
+  
+  if (is.null(PVAL)) {
+    pkstwo <- function(x, tol = 1e-06) {
+      if (is.numeric(x)) 
+        x <- as.double(x)
+      else stop("argument 'x' must be numeric")
+      p <- rep(0, length(x))
+      p[is.na(x)] <- NA
+      IND <- which(!is.na(x) & (x > 0))
+      if (length(IND))
+        p[IND] <- tryCatch({
+          tryRes <- .C(stats:::C_pkstwo, length(x[IND]), p = x[IND], 
+                       as.double(tol), PACKAGE = "stats")$p
+        }, warning = function(w) {
+          warning(w)
+        }, error = function(e) {
+          tryRes <- .Call(stats:::C_pKS2, p = x[IND], tol)
+        }, finally = {
+        })
+      p
+    }
+    PVAL <- ifelse(alternative == "two.sided", 1 - pkstwo(sqrt(n) * 
+                                                            STATISTIC), exp(-2 * n * STATISTIC^2))
+  }
+  PVAL <- min(1, max(0, PVAL))
+  RVAL <- list(statistic = STATISTIC, p.value = PVAL, alternative = nm_alternative, 
+               method = METHOD, data.name = DNAME)
+  
+  class(RVAL) <- "htest"
+  return(RVAL)
+}  
+
+
+outputFolder <- "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/truncated_KS"
+xai_path <- "/media/Storage/anndata_shap/Z_SHAP/background_200_balanced_data/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5_avgExp_0.1/"
+
+result_collector <- list() 
+{
+  `%ni%`<-Negate(`%in%`)
+  ###ks params###
+  topn_ks=0.2 #top 20% truncated ks test
+  analyze_with='TCGA'
+}
+for(ref in c('Known disease genes')){
+  if(ref=='Known disease genes'){
+    #source(paste0(analysis_script_dir,'/EVAL_Known disease gene selection.R'))
+    ref_genes<-Known_disease_genes
+    ref_weight<-Known_disease_genes_weight
+  }
+  # else if(ref=='Prognostic genes'){
+  #   # Need to run 'Prognostic gene selection(survival_analysis).R' first
+  #   meta.res<-read.table(paste0(standard_positive_dir,'survival_analysis_result.txt'))
+  #   Prognostic_genes<-rownames(meta.res)[meta.res$FDR<0.05]
+  #   Prognostic_genes_weight=rep(1,length(Prognostic_genes))
+  #   ref_genes<-Prognostic_genes
+  #   ref_weight<-Prognostic_genes_weight
+  # }
+  # else if(ref=='Standard Positive genes(GO:0051607)'){
+  #   # source(paste0(analysis_script_dir,'/EVAL_Standard positive gene selection(GO:0051607).R'))
+  #   ref_genes<-Standard_Positive_gene_COVID19
+  #   ref_weight<-Standard_Positive_gene_COVID19_weight
+  # }
+  names(ref_weight)=ref_genes
+  for(sort.meth in c('pvalue')){
+    # load(paste0('DE_result_analyzed_with_',analyze_with,'_',sort.meth,'_sorted_fdr_',fdr_cut,'_cut.rda'))
+    # load("/media/Storage/Downloads/scLUAD_Epithelial cells_DE_result.rda")
+
+    # 
+    # 
+    # res_df<-sapply(setdiff(names(result.list),'gene'),FUN=function(x){result.list[[x]][match(result.list[['gene']],rownames(result.list[[x]])),'qval']})
+    # rownames(res_df)=result.list[['gene']]
+    # res_df%<>%as.data.frame()
+    # res_df_ks<-res_df[which(rownames(res_df)%in%ref_genes),]
+    # final_df_ks<-matrix(NA,nrow=ncol(res_df_ks),ncol=1)
+    # rownames(final_df_ks)=colnames(res_df_ks)
+    
+    
+    #lets try the same
+    seurat_DGE <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_COMPLETE_withRANDOM_Human_HF_min_pct_0.1_logfc_0.1.xlsx")
+  for (disease in unique(seurat_DGE$disease)) {
+    seurat_DGE_dis <- seurat_DGE[seurat_DGE$disease == disease,] 
+    for (celltype in unique(seurat_DGE$celltype)) {
+      seurat_DGE_ct <- seurat_DGE_dis[seurat_DGE_dis$celltype == celltype,]
+      #some naming stuff for finding the right xai DGE file
+      class_xai <- switch(disease,
+                          "Hypertrophy" = "class_9",
+                          "HFpEF" = "class_10",
+                          "HFrEF" = "class_11",
+                          NULL)
+      
+      #Some adjustments because of file names...
+      disease_xai <- disease
+      celltype_xai <- celltype
+      if (disease_xai == "Hypertrophy") {disease_xai <- "AS"}
+      if (celltype_xai  == "Immune.cells") {celltype_xai <- "ImmuneCells"}
+      if (celltype_xai  == "Smooth.Muscle") {celltype_xai <- "SmoothMuscle"}
+      
+      #Load in XAI wilcox
+      xai_DGE_wil <- openxlsx::read.xlsx(paste0(xai_path,"wilcoxon_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx"))
+      xai_DGE_wil %<>% dplyr::select("Feature","p_val","avg_cube_root_FC","mean_SHAP_group1","mean_SHAP_group2","p_adj")
+      colnames(xai_DGE_wil) <- c("gene","p_val","avg_log2FC","pct.1","pct.2","p_val_adj")
+      xai_DGE_wil$disease <-  disease
+      xai_DGE_wil$celltype <- celltype
+      xai_DGE_wil$testmethod <- "XAI_Wilcoxon"
+      xai_DGE_wil$myAUC <- NA
+      xai_DGE_wil$power <- NA
+      xai_DGE_wil$avg_diff <- NA
+      
+      #Load in XAI t-test
+      xai_DGE_t <- openxlsx::read.xlsx(paste0(xai_path,"t_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx"))
+      xai_DGE_t %<>% dplyr::select("Feature","p_val","avg_cube_root_FC","mean_SHAP_group1","mean_SHAP_group2","p_adj")
+      colnames(xai_DGE_t) <- c("gene","p_val","avg_log2FC","pct.1","pct.2","p_val_adj")
+      xai_DGE_t$disease <-  disease
+      xai_DGE_t$celltype <- celltype
+      xai_DGE_t$testmethod <- "XAI_T"
+      xai_DGE_t$myAUC <- NA
+      xai_DGE_t$power <- NA
+      xai_DGE_t$avg_diff <- NA
+      
+      xai_DGE <- rbind(xai_DGE_wil, xai_DGE_t)
+      
+      #Comine both DF
+      seurat_DGE_ct <- rbind(seurat_DGE_ct, xai_DGE)
+      seurat_DGE_list <- split(seurat_DGE_ct, seurat_DGE_ct$testmethod) # create the list based on testingmethod
+      #sort by p-value each DGE result
+      seurat_DGE_list <- lapply(seurat_DGE_list, function(x) {
+        # x[order(x$p_val_adj, decreasing = F),]
+        # x$rank <- rank(x$p_val_adj, ties.method = "first")
+        x[order(abs(x$avg_log2FC), decreasing = T),]
+        x$rank <- rank(abs(x$avg_log2FC), ties.method = "first")
+        return(x)
+        })
+      seurat_DGE_list$gene <- unique(unlist(lapply(seurat_DGE_list, function(x) x$gene)))
+      res_df<-sapply(setdiff(names(seurat_DGE_list),'gene'),FUN=function(x){seurat_DGE_list[[x]][match(seurat_DGE_list[['gene']],seurat_DGE_list[[x]]$gene),'rank']})
+      rownames(res_df)=seurat_DGE_list[['gene']]
+      res_df%<>%as.data.frame()
+      res_df_ks<-res_df[rownames(res_df) %in% ref_genes,]
+      final_df_ks<-matrix(NA,nrow=ncol(res_df_ks),ncol=1)
+      rownames(final_df_ks)=colnames(res_df_ks)
+      
+      for(i in 1:ncol(res_df_ks)){
+        meth=colnames(res_df_ks)[i]
+        print(meth)
+        if(!is.null(topn_ks)){
+          if(topn_ks>1){
+            topn_ks.use=as.numeric(topn_ks)
+            topn_ks.write=paste0('top',as.numeric(topn_ks))
+          }else{
+            topn_ks.use=round(as.numeric(topn_ks)*nrow(res_df))
+            topn_ks.write=paste0('top',as.numeric(topn_ks)*100,'percent')
+          }
+          if(sum(!is.na(res_df[,meth]))<topn_ks.use){
+            topn_ks.use=sum(!is.na(res_df[,meth]))
+          }
+          
+          topn_ord_ks<-res_df_ks[,meth]
+          
+          
+          topn_ks_last<-topn_ks.use+
+            (1:(length(topn_ord_ks)-sum(topn_ord_ks<=topn_ks.use, na.rm = T)))*(nrow(res_df)-topn_ks.use)/
+            (length(topn_ord_ks)-sum(topn_ord_ks<=topn_ks.use, na.rm = T))
+          
+          
+          ##1108 fix
+          ref_weight.use<-ref_weight
+          topn_ord_ks_use<-topn_ord_ks[which(topn_ord_ks<=topn_ks.use)]
+          ref_genes.use<-rownames(res_df_ks)[which(topn_ord_ks<=topn_ks.use)]
+          if(any(table(topn_ord_ks_use)>1)){
+            for(tie_rank in names(table(topn_ord_ks_use))[table(topn_ord_ks_use)>1]){
+              ref_weight.use[ref_genes.use[which(topn_ord_ks_use==tie_rank)]]=mean(ref_weight.use[ref_genes.use[which(topn_ord_ks_use==tie_rank)]])
+            }
+            for(tie_rank in names(table(topn_ord_ks_use))[table(topn_ord_ks_use)>1]){
+              sorted_toku<-sort(unique(topn_ord_ks_use))
+              
+              if(as.numeric(tie_rank)==min(topn_ord_ks_use)){
+                topn_ord_ks_use[topn_ord_ks_use==tie_rank]=((1:sum(topn_ord_ks_use==tie_rank))/sum(topn_ord_ks_use==tie_rank))*as.numeric(tie_rank)+0
+              }else{
+                topn_ord_ks_use[topn_ord_ks_use==tie_rank]=((1:sum(topn_ord_ks_use==tie_rank))/sum(topn_ord_ks_use==tie_rank))*(as.numeric(tie_rank)-sorted_toku[which(sorted_toku==tie_rank)-1])+sorted_toku[which(sorted_toku==tie_rank)-1]
+              }
+            }
+          }
+          w.x=c(ref_weight.use[ref_genes.use]%>%unname(),rep(mean(ref_weight.use[setdiff(rownames(res_df_ks),ref_genes.use)]),topn_ks_last%>%length()))
+          r1<-ks.test.truncated(c(topn_ord_ks_use,topn_ks_last),w.x=w.x,y='punif',min=0,max=nrow(res_df),alternative = 'gr',y.min=0, y.max=nrow(res_df))
+        }else{
+          if(sum(is.na(res_df_ks[,meth]))>0){
+            topn_ks.use=sum(!is.na(res_df[,meth]))
+            topn_ord_ks<-res_df_ks[,meth]
+            topn_ks_last<-topn_ks.use+(1:(length(topn_ord_ks)-sum(topn_ord_ks<=topn_ks.use, na.rm = T)))*(nrow(res_df)-topn_ks.use)/(length(topn_ord_ks)-sum(topn_ord_ks<=topn_ks.use, na.rm = T))
+            w.x=c(ref_weight[rownames(res_df_ks)][which(topn_ord_ks<=topn_ks.use)]%>%unname(),rep(mean(ref_weight[rownames(res_df_ks)][setdiff(c(1:nrow(res_df_ks)),which(topn_ord_ks<=topn_ks.use))]),topn_ks_last%>%length()))
+            topn_ord_ks<-topn_ord_ks[which(topn_ord_ks<=topn_ks.use)]
+            r1<-ks.test.truncated(c(topn_ord_ks,topn_ks_last),w.x=w.x,y='punif',min=0,max=nrow(res_df),alternative = 'gr',y.min=0, y.max=nrow(res_df))
+          }else{
+            #just run full ks test
+            w.x=ref_weight[rownames(res_df_ks)]
+            r1<-ks.test.truncated(res_df_ks[,meth],w.x=w.x,y='punif',min=0,max=nrow(res_df),alternative = 'gr',y.min=0, y.max=nrow(res_df))
+          }
+        }
+        final_df_ks[i,1]=r1$p.value
+        result_collector[[meth]][[disease]][[celltype_xai]] <- (-log10(r1$p.value))
+      }
+      
+      final_df_ks <- as.data.frame(final_df_ks)
+      colnames(final_df_ks) <- c("r1_pvalue")
+      final_df_ks$celltype <- celltype
+      final_df_ks$disease <- disease
+      final_df_ks$mlog10 <- (-log10(final_df_ks$r1_pvalue))
+      openxlsx::write.xlsx(final_df_ks,paste0(outputFolder,'/DGE_result',"_",disease,"_",celltype,"_",ref,'_detection_weighted_ks_',sort.meth,'_sorted_top_',topn_ks*100,'_percent_genes_fdr_','_cut.xlsx'),colNames = T, rowNames=T)
+      
+      }
+    }  
+  }
+}
+
+
+flatten_list <- function(x, parent_name = "") {
+  if (is.list(x)) {
+    result <- list()
+    for (name in names(x)) {
+      full_name <- if (parent_name == "") name else paste(parent_name, name, sep = ".")
+      result <- c(result, flatten_list(x[[name]], full_name))
+    }
+    return(result)
+  } else {
+    return(setNames(list(x), parent_name))
+  }
+}
+
+wide.df <- as.data.frame(flatten_list(result_collector))
+df.result_list <- pivot_longer(wide.df, cols = everything(), names_to = c("Tool","Disease","Cell_Type"), names_sep = "\\.")
+
+
+# for Hypertrophy
+disease <- "HFpEF"
+testing_method <- c("XAI_T", "XAI_Wilcoxon", "wilcox","t")
+df.result_list.AS <- df.result_list[df.result_list$Disease == disease,]
+df.result_list.AS <- df.result_list[df.result_list$Tool %in% testing_method,]
+
+
+theme_box_step_plot <- function(){
+  theme_bw() +
+    theme(
+      panel.border = element_rect(colour = "black", fill = NA, size = 1),
+      panel.grid.major = element_line(colour = "grey", linetype = "dotted"),
+      panel.grid.minor = element_line(colour = "grey", linetype = "dotted"),
+      axis.line = element_line(colour = "black"),
+      legend.background = element_rect(colour = "grey", fill = "white"),
+      legend.box.background = element_rect(colour = "grey", size = 0.5),
+    )
+}
+
+
+#exclude Neurons because of too small cell numbers
+df.result_list.AS <- df.result_list.AS[df.result_list.AS$Cell_Type != "Neuro",]
+
+df.result_list.AS$Tool <- factor(df.result_list.AS$Tool, levels = c("XAI", "wilcox", "wilcox_limma","bimod","t","negbinom","poisson","LR","MAST","roc","DESeq2","Random"))
+
+df.result_list.AS$Tool <- factor(df.result_list.AS$Tool, levels = c("XAI_T", "XAI_Wilcoxon", "wilcox","t"))
+
+bar_colours <- c("royalblue","#2c2cb4","#bb0099","maroon", "tomato", "#b35900", "#236e00", "#7ad500", "#881800", "#004655","#6fa9a9","#DAA520")
+dot_colours <- c("maroon","maroon","#2F4F4F","#2F4F4F", "tomato", "#b35900", "#236e00", "#7ad500", "#881800", "#004655","#6fa9a9","#DAA520")
+
+ggplot(df.result_list.AS, aes(x=Cell_Type, y=value, fill=Tool))+
+  geom_col(position="dodge", colour="black", alpha=0.6)+
+  theme_box_step_plot() +
+  facet_wrap(~Cell_Type, scales = "free") +
+  scale_fill_manual(labels=levels(df.result_list.AS$Tool), values =  bar_colours)+
+  labs(title = paste0("Human - ",disease, " vs healthy"), y = "-log10(p-values)") +
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_text(color = "black", size = 18, family = "Helvetica"),
+        axis.title.x = element_blank(),
+        axis.title = element_text(size = 18, color = "black", family = "Helvetica"),
+        plot.title = element_text(size = 18, hjust = 0.5, family = "Helvetica"),
+        axis.line = element_line(color = "black"),
+        strip.text.x = element_text(size = 18, color = "black", family = "Helvetica"),
+        legend.position = "right",
+        legend.text = element_text(size = 16, color = "black", family = "Helvetica"),
+        legend.title = element_text(size = 16, color = "black", family = "Helvetica", face = "bold", hjust =0.5)
+        )
+
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_KS/Human_Hypertrophy_truncated_KS_top20_genes.pdf", width = 15, height = 4)
+
+```
+
+#10. GSEA with Seurat wilcox and t-test vs XAI wilcox and t-test
+
+```{r}
+#with prefiltered DEGs
+# seurat_DGE <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_COMPLETE_withRANDOM_Human_HF_min_pct_0.1_logfc_0.1.xlsx")
+
+#with wilcox only non filtrered degs
+seurat_DGE <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_Seurat_wilcox_Test_Human_HF_min_pct_0_logfc_0_for_GSEA.xlsx")
+
+test.Seurat <- c("wilcox")
+
+#initalize cell type and disease
+cell_type <- "Neuro"
+disease <- "HFpEF"
+
+seurat_DGE_sub <- seurat_DGE[seurat_DGE$disease == disease & seurat_DGE$celltype == cell_type & seurat_DGE$testmethod == "wilcox", ]
+
+OrgDb = org.Hs.eg.db
+# define universe with ENTREZIDs as data frames
+egallgenes <- as.vector(rownames(Seu.Obj.annotated)) 
+egallgenes = bitr(egallgenes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+
+egallgenes$stat <- seurat_DGE_sub[["avg_log2FC"]][match(egallgenes$SYMBOL,seurat_DGE_sub$rowname)] 
+mygeneList <- egallgenes$stat
+names(mygeneList) <- egallgenes$ENTREZID
+mygeneList<-sort(mygeneList,decreasing = T)
+mygeneList <- mygeneList[!is.na(mygeneList)]
+      
+GO.GSEA <- gseGO(geneList = mygeneList,
+                 ont = "BP",
+                 OrgDb = OrgDb,
+                 keyType = "ENTREZID",
+                 minGSSize = 2,
+                 maxGSSize = 500,
+                 pvalueCutoff = 1,
+                 pAdjustMethod = "BH",
+                 verbose = FALSE,
+                 eps = 0,
+                 by= "fgsea",
+                 seed = 1234)
+
+GO.GSEA_save <- setReadable(GO.GSEA, OrgDb = OrgDb, keyType = "ENTREZID")
+write.xlsx(GO.GSEA_save@result,paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/GSEA_",cell_type,"_",disease,"_wilcox_seurat.xlsx"), rowNames=T)
+
+# GO.GSEA@result$Description <- str_wrap(GO.GSEA@result$Description, width = 40)
+# GO.GSEA@result$p.adjust <- -log10(GO.GSEA@result$p.adjust)
+theme_box <- function(){
+  theme_bw() +
+    theme(
+      panel.border = element_rect(colour = "black", fill = NA, size = 1),
+      # panel.grid.major = element_blank(),
+      # panel.grid.minor = element_blank(),
+      panel.grid.major = element_line(colour = "grey90", linetype = "dotted"),
+      panel.grid.minor = element_line(colour = "grey90", linetype = "dotted"),
+      panel.grid.major.y = element_line(colour = "black", linetype = "solid", size = 0.5), # Add black lines across y-axis
+      # strip.placement = "outside",
+      # axis.ticks.x = element_blank(),
+      axis.line = element_line(colour = "black")
+    )
+}
+
+# Define a vector of filler words you want to remove
+filler_words <- c("of", "in", "the", "on", "for", "and", "to")
+
+# Function to shorten each word to max 7 characters and remove filler words
+shorten_term <- function(term) {
+  words <- strsplit(term, " ")[[1]]  # Split the term into individual words
+  shortened_words <- sapply(words, function(word) {
+    if (word %in% filler_words) {
+      return("")  # Replace filler words with an empty string
+    } else if (nchar(word) > 7) {
+      paste0(substr(word, 1, 7), ".")  # Truncate to 7 characters and add a .
+    } else {
+      word  # Keep the word as is if it's less than or equal to 7 characters
+    }
+  })
+  paste(shortened_words[shortened_words != ""], collapse = " ")  # Join the non-empty words
+}
+
+
+
+GO.GSEA@result$Description <- sapply(GO.GSEA@result$Description, shorten_term)
+
+rdgplot <- ridgeplot.gseaResult(GO.GSEA,showCategory = 20, label_format = 30, core_enrichment = T)+ labs(x="enrichment distribution")
+rdgplot + 
+  xlim(-8, 8) +
+  theme_box() +
+  # scale_fill_gradient(low = "#497CB4",
+  #                     high = "#D06D68",
+  #                     breaks=scales::pretty_breaks(n=5)) +
+  theme(plot.margin = ggplot2::margin(t = 0.1, 
+                                      r = 0.1,
+                                      b = 0.1,
+                                      l = 0.1, 
+                                      unit = "cm"),
+        axis.text.x = element_text(color = "black",angle = 0,hjust = 0.5, size = 14, family = "Helvetica"),
+        axis.text.y = element_text(color = "black", size = 10, family = "Helvetica"),
+        axis.title.x = element_text(color = "black", size = 14, family = "Helvetica"),
+        axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+        plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
+        plot.subtitle = element_text(size = 14, hjust = 0, family = "Helvetica"),
+        axis.line = element_line(color = "black"),
+        strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+        legend.text = element_text(size = 8, color = "black", family = "Helvetica"),
+        legend.title = element_text(size = 10, color = "black", family = "Helvetica", face = "bold", hjust =0.5),
+        legend.justification = "left",
+        legend.position = "bottom",
+        # legend.box.just = "left",
+        legend.direction = "horizontal",
+        legend.key.width = unit(0.5, "cm"), # Adjust the width of the legend keys
+        legend.margin = margin(0, 0, 0, 0))+
+  ggplot2::guides(fill = ggplot2::guide_colorbar(title = "p.adj",
+                         title.position = "top",
+                         title.hjust = 0.5,
+                         barwidth = unit(3.5,"cm"),
+                         barheight = unit(0.5,"cm"),
+                         frame.colour = "black",
+                         frame.linewidth = 0.3,
+                         ticks.colour = "black",
+                         order = 1))
+
+ggsave(filename = paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/GSEA_analysis_XAI_seurat/seurat_wilcox/",cell_type,"_",disease,"/ridgeplot_",cell_type,"_",disease,"_wilcox_seurat.pdf"), width = 7, height = 9.5)
+
+# avgExp threshodl 0.1
+#some naming stuff for finding the right xai DGE file
+class_xai <- switch(disease,
+                    "Hypertrophy" = "class_9",
+                    "HFpEF" = "class_10",
+                    "HFrEF" = "class_11",
+                    NULL)
+
+disease_xai <- disease
+celltype_xai <- cell_type
+if (disease_xai == "Hypertrophy") {disease_xai <- "AS"}
+if (celltype_xai  == "Immune.cells") {celltype_xai <- "ImmuneCells"}
+if (celltype_xai  == "Smooth.Muscle") {celltype_xai <- "SmoothMuscle"}
+
+#Xai_0.1_0.5_0.1
+# xai_path <- paste0("/media/Storage/anndata_shap/Z_SHAP/background_200_balanced_data/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5_avgExp_0.1/t_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx")
+#Xai_0_0_0
+xai_path <- paste0("/media/Storage/anndata_shap/Z_SHAP/background_200_balanced_data/Human_DGE_XAI_analysis_SHAP_tresh_0_log_0_avgExp_0/t_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx")
+
+xai_DGE <- openxlsx::read.xlsx(xai_path)
+
+OrgDb = org.Hs.eg.db
+# define universe with ENTREZIDs as data frames
+egallgenes <- as.vector(rownames(Seu.Obj.annotated)) 
+egallgenes = bitr(egallgenes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+
+egallgenes$stat <- xai_DGE[["avg_cube_root_FC"]][match(egallgenes$SYMBOL,xai_DGE$Feature)] 
+mygeneList <- egallgenes$stat
+names(mygeneList) <- egallgenes$ENTREZID
+mygeneList<-sort(mygeneList,decreasing = T)
+mygeneList <- mygeneList[!is.na(mygeneList)]
+      
+GO.GSEA <- gseGO(geneList = mygeneList,
+                 ont = "BP",
+                 OrgDb = OrgDb,
+                 keyType = "ENTREZID",
+                 minGSSize = 2,
+                 maxGSSize = 500,
+                 pvalueCutoff = 1,
+                 pAdjustMethod = "BH",
+                 verbose = FALSE,
+                 eps = 0,
+                 by= "fgsea",
+                 seed = 1234)
+
+GO.GSEA_save <- setReadable(GO.GSEA, OrgDb = OrgDb, keyType = "ENTREZID")
+write.xlsx(GO.GSEA_save@result,paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/GSEA_",cell_type,"_",disease,"_t_xai.xlsx"), rowNames=T)
+
+GO.GSEA@result$Description <- sapply(GO.GSEA@result$Description, shorten_term)
+
+rdgplot <- ridgeplot.gseaResult(GO.GSEA,showCategory = 20, label_format = 30, core_enrichment = T)+ labs(x="enrichment distribution")
+rdgplot + 
+  xlim(-2.3, 2.3) +
+  theme_box() +
+  # scale_y_discrete(expand = expansion(mult = c(0.05,0.2)))+
+  theme(plot.margin = ggplot2::margin(t = 0.1, 
+                                      r = 0.1,
+                                      b = 0.1,
+                                      l = 0.1, 
+                                      unit = "cm"),
+        axis.text.x = element_text(color = "black",angle = 0,hjust = 0.5, size = 14, family = "Helvetica"),
+        axis.text.y = element_text(color = "black", size = 10, family = "Helvetica"),
+        axis.title.x = element_text(color = "black", size = 14, family = "Helvetica"),
+        axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+        plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
+        plot.subtitle = element_text(size = 14, hjust = 0, family = "Helvetica"),
+        axis.line = element_line(color = "black"),
+        strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+        legend.text = element_text(size = 8, color = "black", family = "Helvetica"),
+        legend.title = element_text(size = 10, color = "black", family = "Helvetica", face = "bold", hjust =0.5),
+        legend.justification = "left",
+        legend.position = "bottom",
+        # legend.box.just = "left",
+        legend.key.width = unit(0.5, "cm"), # Adjust the width of the legend keys
+        legend.margin = margin(0, 0, 0, 0),
+        legend.direction = "horizontal")+
+  ggplot2::guides(fill = ggplot2::guide_colorbar(title = "p.adj",
+                         title.position = "top",
+                         title.hjust = 0.5,
+                         barwidth = unit(3.5,"cm"),
+                         barheight = unit(0.5,"cm"),
+                         frame.colour = "black",
+                         frame.linewidth = 0.3,
+                         ticks.colour = "black",
+                         order = 1))
+
+ggsave(filename = paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/GSEA_analysis_XAI_seurat/XAI_wilcox/",cell_type,"_",disease,"/ridgeplot_",cell_type ,"_",disease,"_t_XAI.pdf"), width = 7, height = 9.5)
+```
+
+# 11. Hypergeometric distribution test, caluclates probability that the umber of DEGs associated with each GO term is higher than expected by chance
+```{r}
+library(data.table)
+library(plyr)
+library(GO.db)
+library(stringr)
+library(grid)
+library(gridExtra)
+library(ggplot2)
+# library(mHG)
+library(org.Hs.eg.db)
+library(org.Mm.eg.db)
+
+# MAST data set
+#diffex = readRDS("/media/Storage/Downloads/comb_fdr_logfc.rds")
+
+#Our data set
+seurat_DGE <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_Seurat_wilcox_Test_Human_HF_min_pct_0_logfc_0_for_GSEA.xlsx")
+test.Seurat <- c("wilcox")
+#initalize cell type and disease
+cell_type <- "Cardiomyocytes"
+disease <- "HFpEF"
+#subset by it
+seurat_DGE_sub <- seurat_DGE[seurat_DGE$disease == disease & seurat_DGE$celltype == cell_type & seurat_DGE$testmethod == "wilcox", ]
+#relevant columns
+seurat_DGE_sub %<>% dplyr::select(rowname,p_val_adj, avg_log2FC)
+#replace Gene names with entrezIDs
+OrgDb = org.Hs.eg.db
+# define universe with ENTREZIDs as data frames
+egallgenes <- as.vector(rownames(Seu.Obj.annotated)) 
+egallgenes = bitr(egallgenes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+seurat_DGE_sub$rowname <- as.character(match(seurat_DGE_sub$rowname,egallgenes$SYMBOL))
+seurat_DGE_sub <- seurat_DGE_sub[complete.cases(seurat_DGE_sub),]
+setDT(seurat_DGE_sub)
+
+g_legend<-function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)}
+
+goterms = AnnotationDbi::select(org.Hs.eg.db, seurat_DGE_sub$rowname,"GO","ENTREZID")
+
+setDT(goterms)
+goterms = goterms[ONTOLOGY%in%"BP"]
+#only experimental evidence
+goterms = goterms[EVIDENCE%in%c("EXP","IDA","IPI","IMP","IGI","IEP")]
+unique.go = goterms[,unique(ENTREZID),.(GO)]
+terms = AnnotationDbi::select(GO.db,columns = c("GOID","TERM"),unique(goterms$GO))
+
+setnames(unique.go,"GO","GOID")
+setnames(unique.go,"V1","ENTREZID")
+setDT(terms)
+terms = unique(terms)
+unique.go = unique(unique.go)
+unique.go = merge(unique.go,terms,by="GOID")
+unique.go[,N:=length(ENTREZID),.(GOID)]
+# GO:0060537 = muscle tissue development, GO:0014706 = striated muscle tissue development, GO:0009888 tissue development
+offspring = GOBPOFFSPRING[["GO:0014706"]] 
+
+#Some renaming for furthr usage
+setnames(seurat_DGE_sub,"rowname","ENTREZID")
+setnames(seurat_DGE_sub, "p_val_adj", "seu_fdr")
+setnames(seurat_DGE_sub, "avg_log2FC", "seu_log2fc")
+
+
+thresholds = c(0.00005,0.0001,0.0005)
+prob_thresh=0.01
+NN = length(unique(unique.go$ENTREZID))
+methods = c("seu_fdr")
+loops = expand.grid(thresholds,methods)
+
+thresh=1e-30
+thresh=1e-20
+thresh=1e-10
+
+meth="seu_fdr"
+result_collector <- list()
+results = apply(loops,1,function(looprow){
+  thresh = looprow[1]
+  meth = as.character(looprow[2])
+  fc = gsub("fdr","log2fc",meth)
+  
+
+  significant_genes = seurat_DGE_sub[AnnotationDbi::get(meth) < thresh & abs(AnnotationDbi::get(fc)) > log2(1.25), ENTREZID]
+  filtered_unique_go = unique.go[ENTREZID %in% significant_genes]
+  
+  ###
+  filtered_diffex <- seurat_DGE_sub[AnnotationDbi::get(meth) < thresh & abs(AnnotationDbi::get(fc)) > log2(1.25), ENTREZID]
+  res_filtered <- unique.go[ENTREZID %in% filtered_diffex]
+  
+  res <- res_filtered[, list(
+    q = length(ENTREZID),
+    m = N,
+    n = NN - N,
+    k = length(seurat_DGE_sub[get(meth) < thresh, ENTREZID]),
+    prob = 1 - phyper(
+      q = length(ENTREZID),
+      m = N,
+      n = NN - N,
+      k = length(seurat_DGE_sub[get(meth) < thresh, ENTREZID])
+    ),
+    TERM,
+    N,
+    hit = length(ENTREZID)
+  ), by = list(GOID)]
+  res
+  ###
+  
+  nr.inGO = length(unique(res)[GOID%in%offspring&p.adjust(prob,"fdr")<prob_thresh,GOID]) 
+  nr.total = length(unique(res)[p.adjust(prob,"fdr")<prob_thresh,GOID])
+  data.frame(thresh,meth,nr.inGO,nr.total,nr.inGO/nr.total)
+  result_collector[[as.character(thresh)]] <- data.frame(thresh,meth,nr.inGO,nr.total,nr.inGO/nr.total)
+})
+
+results_r = ldply(result_collector)
+results_r$.id <- NULL
+setDT(results_r)
+# results_r[,meth:=gsub("zlm_fix","zlmfix",meth)]
+results_r[,rate := nr.imm/nr.tot]
+results_r[,thresh:=as.numeric(as.character(thresh))]
+results_r[,method_global := str_split_fixed(meth,"_",3)[,1]]
+# results_r[,withng := factor(str_split_fixed(meth,"_",3)[,2],labels=c("No CDR control","CDR control"))]
+
+
+
+#Our data set
+xai_DGE <- openxlsx::read.xlsx("/media/Storage/anndata_shap/Z_SHAP/background_200_balanced_data/Human_DGE_XAI_analysis_SHAP_tresh_0_log_0_avgExp_0/t_test_on_class_10_Human_Cardiomyocytes_HFpEF_Human_Cardiomyocytes_CTRL.xlsx")
+
+#relevant columns
+xai_DGE %<>% dplyr::select(Feature,p_adj, avg_cube_root_FC)
+#replace Gene names with entrezIDs
+OrgDb = org.Hs.eg.db
+# define universe with ENTREZIDs as data frames
+egallgenes <- as.vector(rownames(Seu.Obj.annotated)) 
+egallgenes = bitr(egallgenes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+xai_DGE$Feature <- as.character(match(xai_DGE$Feature,egallgenes$SYMBOL))
+xai_DGE <- xai_DGE[complete.cases(xai_DGE),]
+setDT(xai_DGE)
+
+goterms = AnnotationDbi::select(org.Hs.eg.db, xai_DGE$Feature,"GO","ENTREZID")
+
+setDT(goterms)
+goterms = goterms[ONTOLOGY%in%"BP"]
+#only experimental evidence
+goterms = goterms[EVIDENCE%in%c("EXP","IDA","IPI","IMP","IGI","IEP")]
+unique.go = goterms[,unique(ENTREZID),.(GO)]
+terms = AnnotationDbi::select(GO.db,columns = c("GOID","TERM"),unique(goterms$GO))
+
+setnames(unique.go,"GO","GOID")
+setnames(unique.go,"V1","ENTREZID")
+setDT(terms)
+terms = unique(terms)
+unique.go = unique(unique.go)
+unique.go = merge(unique.go,terms,by="GOID")
+unique.go[,N:=length(ENTREZID),.(GOID)]
+# GO:0060537 = muscle tissue development, GO:0014706 = striated muscle tissue development, GO:0009888 tissue development
+offspring = GOBPOFFSPRING[["GO:0009888"]] 
+
+#Some renaming for furthr usage
+setnames(xai_DGE,"Feature","ENTREZID")
+setnames(xai_DGE, "p_adj", "xai_fdr")
+setnames(xai_DGE, "avg_cube_root_FC", "xai_log2fc")
+
+
+thresholds = c(0.00005,0.0001,0.0005)
+prob_thresh=0.01
+NN = length(unique(unique.go$ENTREZID))
+methods = c("xai_fdr")
+loops = expand.grid(thresholds,methods)
+
+thresh=1e-120
+thresh=1e-90
+thresh=1e-80
+
+meth="xai_fdr"
+result_collector_xai <- list()
+results = apply(loops,1,function(looprow){
+  thresh = looprow[1]
+  meth = as.character(looprow[2])
+  fc = gsub("fdr","log2fc",meth)
+  
+
+  significant_genes = xai_DGE[AnnotationDbi::get(meth) < thresh & abs(AnnotationDbi::get(fc)) > log2(1.25), ENTREZID]
+  filtered_unique_go = unique.go[ENTREZID %in% significant_genes]
+  
+  ###
+  filtered_diffex <- xai_DGE[AnnotationDbi::get(meth) < thresh & abs(AnnotationDbi::get(fc)) > log2(1.25), ENTREZID]
+  res_filtered <- unique.go[ENTREZID %in% filtered_diffex]
+  
+  res <- res_filtered[, list(
+    q = length(ENTREZID),
+    m = N,
+    n = NN - N,
+    k = length(xai_DGE[get(meth) < thresh, ENTREZID]),
+    prob = 1 - phyper(
+      q = length(ENTREZID),
+      m = N,
+      n = NN - N,
+      k = length(xai_DGE[get(meth) < thresh, ENTREZID])
+    ),
+    TERM,
+    N,
+    hit = length(ENTREZID)
+  ), by = list(GOID)]
+  res
+  ###
+  
+  nr.inGO = length(unique(res)[GOID%in%offspring&p.adjust(prob,"fdr")<prob_thresh,GOID]) 
+  nr.total = length(unique(res)[p.adjust(prob,"fdr")<prob_thresh,GOID])
+  data.frame(thresh,meth,nr.inGO,nr.total,nr.inGO/nr.total)
+  result_collector_xai[[as.character(thresh)]] <- data.frame(thresh,meth,nr.inGO,nr.total,nr.inGO/nr.total)
+})
+
+results_r = ldply(result_collector)
+results_r$.id <- NULL
+setDT(results_r)
+# results_r[,meth:=gsub("zlm_fix","zlmfix",meth)]
+results_r[,rate := nr.imm/nr.tot]
+results_r[,thresh:=as.numeric(as.character(thresh))]
+results_r[,method_global := str_split_fixed(meth,"_",3)[,1]]
+# results_r[,withng := factor(str_split_fixed(meth,"_",3)[,2],labels=c("No CDR control","CDR control"))]
+
+p1 = ggplot(results_r[!(method_global%in%"zlmfix")])+
+  aes(x=thresh,y=rate,color=method_global)+
+  geom_point()+
+  geom_line()+
+  scale_x_continuous("FDR Threshold")+
+  scale_y_continuous("Proportion of Immune\nSpecific GO Modules")+
+  facet_wrap(~withng)+
+  scale_color_brewer("Method",
+                     palette =2,
+                     type="qual",
+                     limits=c("limma","zlm","deseq","edger","scde"),
+                     labels=c("Limma","MAST","DESeq","EdgeR","SCDE"))+
+  theme_gray()
+
+leg = g_legend(p1)
+p1
+```
+
+#12. GSEA score calculation
+##12.1 For CM
+```{r}
+
+# "myocardium": Refers to the muscular tissue of the heart, including cardiomyocytes.
+# "contraction": As cardiomyocytes are involved in muscle contraction, this could capture processes like cardiac muscle contraction or regulation of contraction.
+# "sarcomere": The structural unit of myofibrils in muscle cells, essential for contraction in cardiomyocytes.
+# "cardiogenesis": Refers to the formation and development of the heart.
+# "cardiac hypertrophy": Enlargement of cardiomyocytes due to increased workload.
+# "electrophysiology": Cardiomyocytes are critical for electrical signaling in the heart, so this could be a relevant term.
+# "ion transport": Involved in maintaining the electrical activity necessary for cardiomyocyte contraction, such as calcium or potassium ion transport.
+# "gap junction": Refers to the intercellular connections that allow communication between cardiomyocytes.
+# "oxidative phosphorylation": Cardiomyocytes are highly dependent on energy from mitochondrial processes like oxidative phosphorylation.
+# "mitochondria": Relevant because cardiomyocytes have high energy demands.
+# "angiogenesis": Blood vessel formation, which is crucial for supplying oxygen to the heart.
+# "apoptosis": Programmed cell death, relevant during heart failure or cardiac stress.
+# "fibrosis": Tissue scarring, relevant in heart disease.
+
+
+library(GO.db)
+go_terms <- as.data.frame(GOTERM)
+filtered_go <- go_terms[go_terms$Term %in% go_terms$Term[grepl("heart|cardiac|muscle|myocardium|contraction|sarcomere|cardiogenesis|hypertrophy|electrophysiology|ion transport|gap junction|mitochondria|angiogenesis|apoptosis|fibrosis",go_terms$Term, ignore.case = TRUE)],]
+filtered_go <- filtered_go[filtered_go$Ontology == "BP",]
+heart_cardiac_muscle_GOs <- unique(filtered_go$go_id)
+
+GO.GSEA_seu <- read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/GSEA_Cardiomyocytes_HFpEF_wilcox_seurat.xlsx", rowNames=T)
+#Only significant
+GO.GSEA_seu <- GO.GSEA_seu[GO.GSEA_seu$p.adjust <= 0.05,]
+
+
+nr.inGO.seu = length(GO.GSEA_seu$ID[GO.GSEA_seu$ID %in% heart_cardiac_muscle_GOs])
+nr.total.seu = length(GO.GSEA_seu$ID)
+ratio.seu = nr.inGO.seu/nr.total.seu
+
+data.frame(Tool = "XAI_t-test",
+           
+           value = ratio.seu,)
+
+GO.GSEA_xai <- read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/GSEA_Cardiomyocytes_HFpEF_t_xai.xlsx", rowNames=T)
+#Only significant
+GO.GSEA_xai <- GO.GSEA_xai[GO.GSEA_xai$p.adjust <= 0.05,]
+
+nr.inGO.xai = length(GO.GSEA_xai$ID[GO.GSEA_xai$ID %in% heart_cardiac_muscle_GOs])
+nr.total.xai = length(GO.GSEA_xai$ID)
+ratio.xai = nr.inGO.xai/nr.total.xai
+
+
+
 ```
 
