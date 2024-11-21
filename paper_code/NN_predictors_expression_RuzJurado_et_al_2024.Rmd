@@ -12,9 +12,8 @@ editor_options:
 #load libraries
 library(Seurat)
 library(tidyverse)
-library(svglite)
-library(ggplot2)
 library(ggpubr)
+library(ggplot2)
 library(openxlsx)
 source("/media/EOS_ZMM_shared/Bioinformatic/scRNA-SEQ-ZMM/Import10X-HelperFunctions_SeuratV3.R")
 source("/media/EOS_ZMM_shared/Bioinformatic/scRNA-SEQ-ZMM/Mariano_functions.R")
@@ -109,11 +108,20 @@ Seu.Obj.annotated$cell_type_shortened <- plyr::revalue(Seu.Obj.annotated$cell_ty
                                                          "Immune.cells" = "IC",
                                                          "Smooth.Muscle" = "SMC",
                                                          "Neuro" = "NC"))
+#Sum up diseases in one category
+Seu.Obj.annotated$disease_sum <- plyr::revalue(Seu.Obj.annotated$disease,
+                                                       c("CTRL" = "Comb",
+                                                         "CTRL.LV" = "Comb",
+                                                         "CTRL.SP" = "Comb",
+                                                         "HFpEF" = "Comb",
+                                                         "HFrEF" = "Comb",
+                                                         "Hypertrophy" = "Comb"))
+
 DO.MultipleFeature.Dotplot(seuratObj = Seu.Obj.annotated,
                            Feature = genes_of_interest,
                            group.by.x = "cell_type_shortened",
                            group.by.y1 = "Human_other",
-                           group.by.y2 = "disease",
+                           group.by.y2 = "disease_sum",
                            colZ = F,
                            dot.size = c(3,6),
                            plot.margin = c(1,1,1,1),
@@ -121,7 +129,7 @@ DO.MultipleFeature.Dotplot(seuratObj = Seu.Obj.annotated,
                            gene_order = genes_of_interest)
 
 
-ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/Dotplots/MultipleFeature_plot/Human_top10_predictor_MultipleFeaturePlot_figure3d.pdf", width = 10.5, height = 5)
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/Dotplots/MultipleFeature_plot/Human_top10_predictor_MultipleFeaturePlot_DisComb_figure3d.pdf", width = 10.5, height = 5)
 ```
 
 
@@ -2015,212 +2023,350 @@ ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_KS/Hu
 
 ```{r}
 #with prefiltered DEGs
-# seurat_DGE <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_COMPLETE_withRANDOM_Human_HF_min_pct_0.1_logfc_0.1.xlsx")
 
-#with wilcox only non filtrered degs
-seurat_DGE <- openxlsx::read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_Seurat_wilcox_Test_Human_HF_min_pct_0_logfc_0_for_GSEA.xlsx")
-
-test.Seurat <- c("wilcox")
-
-#initalize cell type and disease
-cell_type <- "Neuro"
+#initalize cell type and disease, set testmethod to load
+test.Seurat <- c("wilcox_Test","t")
 disease <- "HFpEF"
-
-seurat_DGE_sub <- seurat_DGE[seurat_DGE$disease == disease & seurat_DGE$celltype == cell_type & seurat_DGE$testmethod == "wilcox", ]
-
-OrgDb = org.Hs.eg.db
-# define universe with ENTREZIDs as data frames
-egallgenes <- as.vector(rownames(Seu.Obj.annotated)) 
-egallgenes = bitr(egallgenes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
-
-egallgenes$stat <- seurat_DGE_sub[["avg_log2FC"]][match(egallgenes$SYMBOL,seurat_DGE_sub$rowname)] 
-mygeneList <- egallgenes$stat
-names(mygeneList) <- egallgenes$ENTREZID
-mygeneList<-sort(mygeneList,decreasing = T)
-mygeneList <- mygeneList[!is.na(mygeneList)]
-      
-GO.GSEA <- gseGO(geneList = mygeneList,
-                 ont = "BP",
-                 OrgDb = OrgDb,
-                 keyType = "ENTREZID",
-                 minGSSize = 2,
-                 maxGSSize = 500,
-                 pvalueCutoff = 1,
-                 pAdjustMethod = "BH",
-                 verbose = FALSE,
-                 eps = 0,
-                 by= "fgsea",
-                 seed = 1234)
-
-GO.GSEA_save <- setReadable(GO.GSEA, OrgDb = OrgDb, keyType = "ENTREZID")
-write.xlsx(GO.GSEA_save@result,paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/GSEA_",cell_type,"_",disease,"_wilcox_seurat.xlsx"), rowNames=T)
-
-# GO.GSEA@result$Description <- str_wrap(GO.GSEA@result$Description, width = 40)
-# GO.GSEA@result$p.adjust <- -log10(GO.GSEA@result$p.adjust)
-theme_box <- function(){
-  theme_bw() +
-    theme(
-      panel.border = element_rect(colour = "black", fill = NA, size = 1),
-      # panel.grid.major = element_blank(),
-      # panel.grid.minor = element_blank(),
-      panel.grid.major = element_line(colour = "grey90", linetype = "dotted"),
-      panel.grid.minor = element_line(colour = "grey90", linetype = "dotted"),
-      panel.grid.major.y = element_line(colour = "black", linetype = "solid", size = 0.5), # Add black lines across y-axis
-      # strip.placement = "outside",
-      # axis.ticks.x = element_blank(),
-      axis.line = element_line(colour = "black")
-    )
-}
-
-# Define a vector of filler words you want to remove
-filler_words <- c("of", "in", "the", "on", "for", "and", "to")
-
-# Function to shorten each word to max 7 characters and remove filler words
-shorten_term <- function(term) {
-  words <- strsplit(term, " ")[[1]]  # Split the term into individual words
-  shortened_words <- sapply(words, function(word) {
-    if (word %in% filler_words) {
-      return("")  # Replace filler words with an empty string
-    } else if (nchar(word) > 7) {
-      paste0(substr(word, 1, 7), ".")  # Truncate to 7 characters and add a .
-    } else {
-      word  # Keep the word as is if it's less than or equal to 7 characters
+cell_names <- c("Cardiomyocytes","Endothelial","Fibroblasts","Immune.cells","Neuro","Pericytes","Smooth.Muscle")
+metric <- "fc" # folchange+pvalue= fc_p, only foldchange = fc
+plotting <- FALSE
+for (method in test.Seurat) {
+  print(method)
+  for (cell_type in cell_names) {
+    
+    seurat_DGE <- openxlsx::read.xlsx(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_Seurat_",method,"_Human_HF_min_pct_0_logfc_0_for_GSEA.xlsx"))
+    
+    if (method == "wilcox_Test") {
+      method.test <- "wilcox"      
     }
-  })
-  paste(shortened_words[shortened_words != ""], collapse = " ")  # Join the non-empty words
+    
+    if(method == "MAST"){
+      method.test <- "MAST"
+    }
+    
+    if(method == "t"){
+      method.test <- "t"
+    }
+    
+    seurat_DGE_sub <- seurat_DGE[seurat_DGE$disease == disease & seurat_DGE$celltype == cell_type, ]
+    
+    #some adjustments for follow up functions
+    if (is.null(seurat_DGE_sub$rowname) & !is.null(seurat_DGE_sub$gene)) {
+      seurat_DGE_sub$rowname <- seurat_DGE_sub$gene
+    }
+    
+    OrgDb = org.Hs.eg.db
+    # define universe with ENTREZIDs as data frames
+    egallgenes <- as.vector(rownames(Seu.Obj.annotated)) 
+    egallgenes = clusterProfiler::bitr(egallgenes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+    
+    #just with logfc
+    if (metric == "fc") {
+      egallgenes$stat <- seurat_DGE_sub[["avg_log2FC"]][match(egallgenes$SYMBOL,seurat_DGE_sub$rowname)]
+      mygeneList <- egallgenes$stat
+      names(mygeneList) <- egallgenes$ENTREZID
+      mygeneList <- mygeneList[!is.na(mygeneList)]
+      mygeneList <- sort(mygeneList,decreasing = T)
+    }
+    
+    if (metric == "fc_p") {
+      
+      ###with p-values used
+      #Merge log fold change (avg_log2FC) and p-values into the gene list
+      egallgenes <- egallgenes %>%
+        left_join(seurat_DGE_sub %>% select(rowname, avg_log2FC, p_val_adj), by = c("SYMBOL" = "rowname"))
+  
+      egallgenes$p_val_adj <- ifelse(egallgenes$p_val_adj == 0, (.Machine$double.xmin*10), egallgenes$p_val_adj)
+      
+      egallgenes <- egallgenes %>%
+       mutate(stat = sign(avg_log2FC) * log10(abs(avg_log2FC / p_val_adj)+1))
+      
+     #with binning
+      egallgenes <- egallgenes %>%
+        mutate(
+          p_bin = case_when(
+            # p_val_adj < 1e-5 ~ 0.1,  
+            # p_val_adj < 1e-3 ~ 0.2,
+            # p_val_adj < 1e-2 ~ 0.3,
+            p_val_adj < 0.05 ~ 0.5,
+            TRUE ~ 1
+          ),
+          stat = sign(avg_log2FC) * log10(abs(avg_log2FC / p_bin)+1)
+        )
+      
+      #sign check, continue if TRUE
+      table(sign(egallgenes$avg_log2FC) == sign(egallgenes$stat))
+      
+      #maximum finite positive and minimum finite negative values
+      max_finite <- max(egallgenes$stat[is.finite(egallgenes$stat)], na.rm = TRUE)
+      min_finite <- min(egallgenes$stat[is.finite(egallgenes$stat)], na.rm = TRUE)
+      
+      #Inf and -Inf replace with finite maximum or minimum
+      egallgenes <- egallgenes %>%
+        mutate(stat = ifelse(is.infinite(stat) & stat > 0, max_finite, stat),
+               stat = ifelse(is.infinite(stat) & stat < 0, min_finite, stat))
+
+      #remove duplicates
+      egallgenes <- egallgenes[!(duplicated(egallgenes$SYMBOL)),]
+  
+      #filter out 0s and NAs
+      egallgenes <- egallgenes[egallgenes$stat != 0,]
+      egallgenes <- egallgenes[complete.cases(egallgenes),]
+      
+      mygeneList <- egallgenes$stat
+      names(mygeneList) <- egallgenes$ENTREZID
+      mygeneList <- sort(mygeneList,decreasing = T)
+    }
+    #RUN GSEA
+    GO.GSEA <- clusterProfiler::gseGO(geneList = mygeneList,
+                     ont = "BP",
+                     OrgDb = OrgDb,
+                     keyType = "ENTREZID",
+                     minGSSize = 10,
+                     maxGSSize = 500,
+                     pvalueCutoff = 1,
+                     pAdjustMethod = "BH",
+                     verbose = FALSE,
+                     eps = 0,
+                     by= "fgsea",
+                     seed = 1234)
+    
+    GO.GSEA_save <- clusterProfiler::setReadable(GO.GSEA, OrgDb = OrgDb, keyType = "ENTREZID")
+    write.xlsx(GO.GSEA_save@result,paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/GSEA_",cell_type,"_",disease,"_",method.test,"_seurat_",metric,".xlsx"), rowNames=T)
+    
+    #theme for plot
+    theme_box <- function(){
+      theme_bw() +
+        theme(
+          panel.border = element_rect(colour = "black", fill = NA, size = 1),
+          # panel.grid.major = element_blank(),
+          # panel.grid.minor = element_blank(),
+          panel.grid.major = element_line(colour = "grey90", linetype = "dotted"),
+          panel.grid.minor = element_line(colour = "grey90", linetype = "dotted"),
+          panel.grid.major.y = element_line(colour = "black", linetype = "solid", size = 0.5), # Add black lines across y-axis
+          # strip.placement = "outside",
+          # axis.ticks.x = element_blank(),
+          axis.line = element_line(colour = "black")
+        )
+    }
+    
+    # Define a vector of filler words you want to remove
+    filler_words <- c("of", "in", "the", "on", "for", "and", "to")
+    
+    # Function to shorten each word to max 7 characters and remove filler words
+    shorten_term <- function(term) {
+      words <- strsplit(term, " ")[[1]]  # Split the term into individual words
+      shortened_words <- sapply(words, function(word) {
+        if (word %in% filler_words) {
+          return("")  # Replace filler words with an empty string
+        } else if (nchar(word) > 7) {
+          paste0(substr(word, 1, 7), ".")  # Truncate to 7 characters and add a .
+        } else {
+          word  # Keep the word as is if it's less than or equal to 7 characters
+        }
+      })
+      paste(shortened_words[shortened_words != ""], collapse = " ")  # Join the non-empty words
+    }
+    
+    
+    
+    GO.GSEA@result$Description <- sapply(GO.GSEA@result$Description, shorten_term)
+    if (plotting == TRUE) {
+      rdgplot <- ridgeplot.gseaResult(GO.GSEA,showCategory = 20, label_format = 30, core_enrichment = T)+ labs(x="enrichment distribution")
+      rdgplot + 
+        xlim(-8, 8) +
+        theme_box() +
+        # scale_fill_gradient(low = "#497CB4",
+        #                     high = "#D06D68",
+        #                     breaks=scales::pretty_breaks(n=5)) +
+        theme(plot.margin = ggplot2::margin(t = 0.1, 
+                                            r = 0.1,
+                                            b = 0.1,
+                                            l = 0.1, 
+                                            unit = "cm"),
+              axis.text.x = element_text(color = "black",angle = 0,hjust = 0.5, size = 14, family = "Helvetica"),
+              axis.text.y = element_text(color = "black", size = 10, family = "Helvetica"),
+              axis.title.x = element_text(color = "black", size = 14, family = "Helvetica"),
+              axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+              plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
+              plot.subtitle = element_text(size = 14, hjust = 0, family = "Helvetica"),
+              axis.line = element_line(color = "black"),
+              strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+              legend.text = element_text(size = 8, color = "black", family = "Helvetica"),
+              legend.title = element_text(size = 10, color = "black", family = "Helvetica", face = "bold", hjust =0.5),
+              legend.justification = "left",
+              legend.position = "bottom",
+              # legend.box.just = "left",
+              legend.direction = "horizontal",
+              legend.key.width = unit(0.5, "cm"), # Adjust the width of the legend keys
+              legend.margin = margin(0, 0, 0, 0))+
+        ggplot2::guides(fill = ggplot2::guide_colorbar(title = "p.adj",
+                               title.position = "top",
+                               title.hjust = 0.5,
+                               barwidth = unit(3.5,"cm"),
+                               barheight = unit(0.5,"cm"),
+                               frame.colour = "black",
+                               frame.linewidth = 0.3,
+                               ticks.colour = "black",
+                               order = 1))
+      
+      ggsave(filename = paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/GSEA_analysis_XAI_seurat/seurat_",method.test,"/",cell_type,"_",disease,"/ridgeplot_",cell_type,"_",disease,"_",method.test,"_seurat",metric,".pdf"), width = 7, height = 9.5)
+    }
+  }
 }
 
-
-
-GO.GSEA@result$Description <- sapply(GO.GSEA@result$Description, shorten_term)
-
-rdgplot <- ridgeplot.gseaResult(GO.GSEA,showCategory = 20, label_format = 30, core_enrichment = T)+ labs(x="enrichment distribution")
-rdgplot + 
-  xlim(-8, 8) +
-  theme_box() +
-  # scale_fill_gradient(low = "#497CB4",
-  #                     high = "#D06D68",
-  #                     breaks=scales::pretty_breaks(n=5)) +
-  theme(plot.margin = ggplot2::margin(t = 0.1, 
-                                      r = 0.1,
-                                      b = 0.1,
-                                      l = 0.1, 
-                                      unit = "cm"),
-        axis.text.x = element_text(color = "black",angle = 0,hjust = 0.5, size = 14, family = "Helvetica"),
-        axis.text.y = element_text(color = "black", size = 10, family = "Helvetica"),
-        axis.title.x = element_text(color = "black", size = 14, family = "Helvetica"),
-        axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
-        plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
-        plot.subtitle = element_text(size = 14, hjust = 0, family = "Helvetica"),
-        axis.line = element_line(color = "black"),
-        strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
-        legend.text = element_text(size = 8, color = "black", family = "Helvetica"),
-        legend.title = element_text(size = 10, color = "black", family = "Helvetica", face = "bold", hjust =0.5),
-        legend.justification = "left",
-        legend.position = "bottom",
-        # legend.box.just = "left",
-        legend.direction = "horizontal",
-        legend.key.width = unit(0.5, "cm"), # Adjust the width of the legend keys
-        legend.margin = margin(0, 0, 0, 0))+
-  ggplot2::guides(fill = ggplot2::guide_colorbar(title = "p.adj",
-                         title.position = "top",
-                         title.hjust = 0.5,
-                         barwidth = unit(3.5,"cm"),
-                         barheight = unit(0.5,"cm"),
-                         frame.colour = "black",
-                         frame.linewidth = 0.3,
-                         ticks.colour = "black",
-                         order = 1))
-
-ggsave(filename = paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/GSEA_analysis_XAI_seurat/seurat_wilcox/",cell_type,"_",disease,"/ridgeplot_",cell_type,"_",disease,"_wilcox_seurat.pdf"), width = 7, height = 9.5)
-
-# avgExp threshodl 0.1
-#some naming stuff for finding the right xai DGE file
-class_xai <- switch(disease,
-                    "Hypertrophy" = "class_9",
-                    "HFpEF" = "class_10",
-                    "HFrEF" = "class_11",
-                    NULL)
-
-disease_xai <- disease
-celltype_xai <- cell_type
-if (disease_xai == "Hypertrophy") {disease_xai <- "AS"}
-if (celltype_xai  == "Immune.cells") {celltype_xai <- "ImmuneCells"}
-if (celltype_xai  == "Smooth.Muscle") {celltype_xai <- "SmoothMuscle"}
-
-#Xai_0.1_0.5_0.1
-# xai_path <- paste0("/media/Storage/anndata_shap/Z_SHAP/background_200_balanced_data/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5_avgExp_0.1/t_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx")
-#Xai_0_0_0
-xai_path <- paste0("/media/Storage/anndata_shap/Z_SHAP/background_200_balanced_data/Human_DGE_XAI_analysis_SHAP_tresh_0_log_0_avgExp_0/t_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx")
-
-xai_DGE <- openxlsx::read.xlsx(xai_path)
-
-OrgDb = org.Hs.eg.db
-# define universe with ENTREZIDs as data frames
-egallgenes <- as.vector(rownames(Seu.Obj.annotated)) 
-egallgenes = bitr(egallgenes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
-
-egallgenes$stat <- xai_DGE[["avg_cube_root_FC"]][match(egallgenes$SYMBOL,xai_DGE$Feature)] 
-mygeneList <- egallgenes$stat
-names(mygeneList) <- egallgenes$ENTREZID
-mygeneList<-sort(mygeneList,decreasing = T)
-mygeneList <- mygeneList[!is.na(mygeneList)]
+# metric <- "fc" # folchange+pvalue= fc_p, only foldchange = fc
+test.xai <- c("wilcox","t")
+#DXG
+for (method in test.xai) {
+  print(method)
+  for (cell_type in cell_names) {
+    #some naming stuff for finding the right xai DGE file
+    class_xai <- switch(disease,
+                        "Hypertrophy" = "class_9",
+                        "HFpEF" = "class_10",
+                        "HFrEF" = "class_11",
+                        NULL)
+    
+    disease_xai <- disease
+    celltype_xai <- cell_type
+    if (disease_xai == "Hypertrophy") {disease_xai <- "AS"}
+    if (celltype_xai  == "Immune.cells") {celltype_xai <- "ImmuneCells"}
+    if (celltype_xai  == "Smooth.Muscle") {celltype_xai <- "SmoothMuscle"}
+    
+    #Xai_0_0_0_0
+    xai_path <- paste0("/media/Storage/anndata_shap/Z_SHAP/background_200_balanced_data/DGE_XAI_analysis_SHAP_tresh_0_log_0_avgExp_0_p_0/",method,"_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx")
+    
+    xai_DGE <- openxlsx::read.xlsx(xai_path)
+    
+    # Get information with Inverse and Direct into foldchange by changing inverse markers sign in the folchange
+    xai_DGE$avg_cube_root_FC <- ifelse(xai_DGE$predictor_type == "Inverse",(xai_DGE$avg_cube_root_FC*-1),xai_DGE$avg_cube_root_FC)
+    
+    OrgDb = org.Hs.eg.db
+    # define universe with ENTREZIDs as data frames
+    egallgenes_xai <- as.vector(rownames(Seu.Obj.annotated)) 
+    egallgenes_xai = clusterProfiler::bitr(egallgenes_xai, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+    #just with logfc
+    if (metric == "fc") {
+      egallgenes_xai$stat <- xai_DGE[["avg_cube_root_FC"]][match(egallgenes_xai$SYMBOL,xai_DGE$Feature)]
+      egallgenes_xai <- egallgenes_xai[complete.cases(egallgenes_xai),]
+  
+      mygeneList <- egallgenes_xai$stat
+      names(mygeneList) <- egallgenes_xai$ENTREZID
+      mygeneList <- mygeneList[!is.na(mygeneList)]
+      mygeneList <- sort(mygeneList,decreasing = T)
+    }
+    
+    if (metric == "fc_p") {
       
-GO.GSEA <- gseGO(geneList = mygeneList,
-                 ont = "BP",
-                 OrgDb = OrgDb,
-                 keyType = "ENTREZID",
-                 minGSSize = 2,
-                 maxGSSize = 500,
-                 pvalueCutoff = 1,
-                 pAdjustMethod = "BH",
-                 verbose = FALSE,
-                 eps = 0,
-                 by= "fgsea",
-                 seed = 1234)
-
-GO.GSEA_save <- setReadable(GO.GSEA, OrgDb = OrgDb, keyType = "ENTREZID")
-write.xlsx(GO.GSEA_save@result,paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/GSEA_",cell_type,"_",disease,"_t_xai.xlsx"), rowNames=T)
-
-GO.GSEA@result$Description <- sapply(GO.GSEA@result$Description, shorten_term)
-
-rdgplot <- ridgeplot.gseaResult(GO.GSEA,showCategory = 20, label_format = 30, core_enrichment = T)+ labs(x="enrichment distribution")
-rdgplot + 
-  xlim(-2.3, 2.3) +
-  theme_box() +
-  # scale_y_discrete(expand = expansion(mult = c(0.05,0.2)))+
-  theme(plot.margin = ggplot2::margin(t = 0.1, 
-                                      r = 0.1,
-                                      b = 0.1,
-                                      l = 0.1, 
-                                      unit = "cm"),
-        axis.text.x = element_text(color = "black",angle = 0,hjust = 0.5, size = 14, family = "Helvetica"),
-        axis.text.y = element_text(color = "black", size = 10, family = "Helvetica"),
-        axis.title.x = element_text(color = "black", size = 14, family = "Helvetica"),
-        axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
-        plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
-        plot.subtitle = element_text(size = 14, hjust = 0, family = "Helvetica"),
-        axis.line = element_line(color = "black"),
-        strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
-        legend.text = element_text(size = 8, color = "black", family = "Helvetica"),
-        legend.title = element_text(size = 10, color = "black", family = "Helvetica", face = "bold", hjust =0.5),
-        legend.justification = "left",
-        legend.position = "bottom",
-        # legend.box.just = "left",
-        legend.key.width = unit(0.5, "cm"), # Adjust the width of the legend keys
-        legend.margin = margin(0, 0, 0, 0),
-        legend.direction = "horizontal")+
-  ggplot2::guides(fill = ggplot2::guide_colorbar(title = "p.adj",
-                         title.position = "top",
-                         title.hjust = 0.5,
-                         barwidth = unit(3.5,"cm"),
-                         barheight = unit(0.5,"cm"),
-                         frame.colour = "black",
-                         frame.linewidth = 0.3,
-                         ticks.colour = "black",
-                         order = 1))
-
-ggsave(filename = paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/GSEA_analysis_XAI_seurat/XAI_wilcox/",cell_type,"_",disease,"/ridgeplot_",cell_type ,"_",disease,"_t_XAI.pdf"), width = 7, height = 9.5)
+      ###with p-values used
+      #Merge log fold change (avg_cube_root_FC) and p-values into the gene list
+      egallgenes_xai <- egallgenes_xai %>%
+        left_join(xai_DGE %>% select(Feature, avg_cube_root_FC, p_adj), by = c("SYMBOL" = "Feature"))
+  
+      egallgenes_xai$p_adj <- ifelse(egallgenes_xai$p_adj == 0, (.Machine$double.xmin*10), egallgenes_xai$p_adj)
+  
+      #Rank genes by combining fold change and p-values
+      # egallgenes_xai <- egallgenes_xai %>%
+      #   mutate(stat = sign(avg_cube_root_FC) * log10(abs(avg_cube_root_FC / p_adj)+1))
+  
+      #normal formula used in bulk
+      # egallgenes_xai <- egallgenes_xai %>%
+      #   mutate(stat = sign(avg_cube_root_FC) * log10(p.adj_bon))
+      
+      #with binning
+      egallgenes_xai <- egallgenes_xai %>%
+          mutate(
+            p_bin = case_when(
+              # p_adj < 1e-5 ~ 0.1,  
+              # p_adj < 1e-3 ~ 0.2,
+              # p_adj < 1e-2 ~ 0.3,
+              p_adj < 0.05 ~ 0.1,
+              TRUE ~ 1
+            ),
+            stat = sign(avg_cube_root_FC) * log10(abs(avg_cube_root_FC / p_bin)+1)
+          )
+      
+      #maximum finite positive and minimum finite negative values
+      max_finite <- max(egallgenes_xai$stat[is.finite(egallgenes_xai$stat)], na.rm = TRUE)
+      min_finite <- min(egallgenes_xai$stat[is.finite(egallgenes_xai$stat)], na.rm = TRUE)
+      
+      #Inf and -Inf replace with finite maximum or minimum
+      egallgenes_xai <- egallgenes_xai %>%
+        mutate(stat = ifelse(is.infinite(stat) & stat > 0, max_finite, stat),
+               stat = ifelse(is.infinite(stat) & stat < 0, min_finite, stat))
+    
+      #remove duplicates
+      egallgenes_xai <- egallgenes_xai[!(duplicated(egallgenes_xai$SYMBOL)),]
+  
+      #filter out 0s
+      egallgenes_xai <- egallgenes_xai[egallgenes_xai$stat != 0,]
+      egallgenes_xai <- egallgenes_xai[complete.cases(egallgenes_xai),]
+  
+      mygeneList <- egallgenes_xai$stat
+      names(mygeneList) <- egallgenes_xai$ENTREZID
+      mygeneList <- sort(mygeneList,decreasing = T)
+    }
+    
+    GO.GSEA <- clusterProfiler::gseGO(geneList = mygeneList,
+                     ont = "BP",
+                     OrgDb = OrgDb,
+                     keyType = "ENTREZID",
+                     minGSSize = 10,
+                     maxGSSize = 500,
+                     pvalueCutoff = 1,
+                     pAdjustMethod = "BH",
+                     verbose = FALSE,
+                     eps = 0,
+                     by= "fgsea",
+                     seed = 1234, 
+                     )
+    
+    GO.GSEA_save <- clusterProfiler::setReadable(GO.GSEA, OrgDb = OrgDb, keyType = "ENTREZID")
+    write.xlsx(GO.GSEA_save@result,paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/GSEA_",cell_type,"_",disease,"_",method,"_XAI_",metric,".xlsx"), rowNames=T)
+    
+    GO.GSEA@result$Description <- sapply(GO.GSEA@result$Description, shorten_term)
+    if (plotting==TRUE) {
+      rdgplot <- ridgeplot.gseaResult(GO.GSEA,showCategory = 20, label_format = 30, core_enrichment = T)+ labs(x="enrichment distribution")
+      rdgplot + 
+        xlim(-2.3, 2.3) +
+        theme_box() +
+        # scale_y_discrete(expand = expansion(mult = c(0.05,0.2)))+
+        theme(plot.margin = ggplot2::margin(t = 0.1, 
+                                            r = 0.1,
+                                            b = 0.1,
+                                            l = 0.1, 
+                                            unit = "cm"),
+              axis.text.x = element_text(color = "black",angle = 0,hjust = 0.5, size = 14, family = "Helvetica"),
+              axis.text.y = element_text(color = "black", size = 10, family = "Helvetica"),
+              axis.title.x = element_text(color = "black", size = 14, family = "Helvetica"),
+              axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+              plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
+              plot.subtitle = element_text(size = 14, hjust = 0, family = "Helvetica"),
+              axis.line = element_line(color = "black"),
+              strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+              legend.text = element_text(size = 8, color = "black", family = "Helvetica"),
+              legend.title = element_text(size = 10, color = "black", family = "Helvetica", face = "bold", hjust =0.5),
+              legend.justification = "left",
+              legend.position = "bottom",
+              # legend.box.just = "left",
+              legend.key.width = unit(0.5, "cm"), # Adjust the width of the legend keys
+              legend.margin = margin(0, 0, 0, 0),
+              legend.direction = "horizontal")+
+        ggplot2::guides(fill = ggplot2::guide_colorbar(title = "p.adj",
+                               title.position = "top",
+                               title.hjust = 0.5,
+                               barwidth = unit(3.5,"cm"),
+                               barheight = unit(0.5,"cm"),
+                               frame.colour = "black",
+                               frame.linewidth = 0.3,
+                               ticks.colour = "black",
+                               order = 1))
+      
+    ggsave(filename = paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/GSEA_analysis_XAI_seurat/XAI_wilcox/",cell_type,"_",disease,"/ridgeplot_",cell_type ,"_",disease,"_",method,"_XAI_",metric,".pdf"), width = 7, height = 9.5)
+    }
+  }
+}  
 ```
 
 # 11. Hypergeometric distribution test, caluclates probability that the umber of DEGs associated with each GO term is higher than expected by chance
@@ -2253,7 +2399,7 @@ seurat_DGE_sub %<>% dplyr::select(rowname,p_val_adj, avg_log2FC)
 OrgDb = org.Hs.eg.db
 # define universe with ENTREZIDs as data frames
 egallgenes <- as.vector(rownames(Seu.Obj.annotated)) 
-egallgenes = bitr(egallgenes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+egallgenes = clusterProfiler::bitr(egallgenes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
 seurat_DGE_sub$rowname <- as.character(match(seurat_DGE_sub$rowname,egallgenes$SYMBOL))
 seurat_DGE_sub <- seurat_DGE_sub[complete.cases(seurat_DGE_sub),]
 setDT(seurat_DGE_sub)
@@ -2358,7 +2504,7 @@ xai_DGE %<>% dplyr::select(Feature,p_adj, avg_cube_root_FC)
 OrgDb = org.Hs.eg.db
 # define universe with ENTREZIDs as data frames
 egallgenes <- as.vector(rownames(Seu.Obj.annotated)) 
-egallgenes = bitr(egallgenes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+egallgenes = clusterProfiler::bitr(egallgenes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
 xai_DGE$Feature <- as.character(match(xai_DGE$Feature,egallgenes$SYMBOL))
 xai_DGE <- xai_DGE[complete.cases(xai_DGE),]
 setDT(xai_DGE)
@@ -2464,9 +2610,11 @@ leg = g_legend(p1)
 p1
 ```
 
-#12. GSEA score calculation
+#12. GSEA score calculation HFpEF
 ##12.1 For CM
 ```{r}
+library(GO.db)
+go_terms <- as.data.frame(GOTERM)
 
 # "myocardium": Refers to the muscular tissue of the heart, including cardiomyocytes.
 # "contraction": As cardiomyocytes are involved in muscle contraction, this could capture processes like cardiac muscle contraction or regulation of contraction.
@@ -2483,11 +2631,9 @@ p1
 # "fibrosis": Tissue scarring, relevant in heart disease.
 
 
-library(GO.db)
-go_terms <- as.data.frame(GOTERM)
-filtered_go <- go_terms[go_terms$Term %in% go_terms$Term[grepl("heart|cardiac|muscle|myocardium|contraction|sarcomere|cardiogenesis|hypertrophy|electrophysiology|ion transport|gap junction|mitochondria|angiogenesis|apoptosis|fibrosis",go_terms$Term, ignore.case = TRUE)],]
-filtered_go <- filtered_go[filtered_go$Ontology == "BP",]
-heart_cardiac_muscle_GOs <- unique(filtered_go$go_id)
+filtered_go_CM <- go_terms[go_terms$Term %in% go_terms$Term[grepl("heart|cardiac|muscle|myocardium|contraction|sarcomere|cardiogenesis|hypertrophy|electrophysiology|ion transport|gap junction|mitochondria|angiogenesis|apoptosis|fibrosis",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_CM <- filtered_go_CM[filtered_go_CM$Ontology == "BP",]
+heart_cardiac_muscle_GOs <- unique(filtered_go_CM$go_id)
 
 GO.GSEA_seu <- read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/GSEA_Cardiomyocytes_HFpEF_wilcox_seurat.xlsx", rowNames=T)
 #Only significant
@@ -2498,9 +2644,19 @@ nr.inGO.seu = length(GO.GSEA_seu$ID[GO.GSEA_seu$ID %in% heart_cardiac_muscle_GOs
 nr.total.seu = length(GO.GSEA_seu$ID)
 ratio.seu = nr.inGO.seu/nr.total.seu
 
-data.frame(Tool = "XAI_t-test",
-           
-           value = ratio.seu,)
+#Precision and Recall
+TP = nr.inGO.seu
+FP = nr.total.seu - TP
+FN = length(heart_cardiac_muscle_GOs) - TP
+
+Prec.Seu  = TP / (TP+FP)
+Rec.Seu = TP / (TP+FN)
+
+F1.Seu = 2*(Prec.Seu*Rec.Seu/(Prec.Seu+Rec.Seu))
+  
+# data.frame(Tool = "XAI_t-test",
+#            
+#            Prec_Seu = ratio.seu)
 
 GO.GSEA_xai <- read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/GSEA_Cardiomyocytes_HFpEF_t_xai.xlsx", rowNames=T)
 #Only significant
@@ -2509,6 +2665,885 @@ GO.GSEA_xai <- GO.GSEA_xai[GO.GSEA_xai$p.adjust <= 0.05,]
 nr.inGO.xai = length(GO.GSEA_xai$ID[GO.GSEA_xai$ID %in% heart_cardiac_muscle_GOs])
 nr.total.xai = length(GO.GSEA_xai$ID)
 ratio.xai = nr.inGO.xai/nr.total.xai
+
+#Precision and Recall
+TP = nr.inGO.xai
+FP = nr.total.xai - TP
+FN = length(heart_cardiac_muscle_GOs) - TP
+
+Prec.XAI  = TP / (TP+FP)
+Rec.XAI = TP / (TP+FN)
+
+F1.XAI = 2*(Prec.XAI*Rec.XAI/(Prec.XAI+Rec.XAI))
+
+```
+
+##12.2 For EC
+
+```{r}
+# "endothelium": The thin layer of cells lining the blood vessels.
+# "angiogenesis": The formation of new blood vessels, a key function of endothelial cells.
+# "vascularization": The process of forming blood vessels, relevant in development and healing.
+# "inflammation": Endothelial cells play a significant role in the inflammatory response.
+# "vascular permeability": Refers to the ability of substances to pass through blood vessel walls.
+# "platelet activation": Endothelial cells are involved in the regulation of platelet function.
+# "shear stress": Refers to the stress on endothelial cells due to blood flow, influencing their function and morphology.
+# "cell adhesion": The process by which endothelial cells interact with other cells, important in immune response and inflammation.
+# "smooth muscle contraction": Endothelial cells influence the contraction of underlying smooth muscle in blood vessels.
+# "endothelial dysfunction": Refers to a pathological condition affecting endothelial cells, relevant in cardiovascular diseases.
+# "nitric oxide production": Endothelial cells produce nitric oxide, a key molecule in vasodilation.
+# "extracellular matrix": The network of proteins and molecules that provide structural support to endothelial cells.
+# "hypoxia": Low oxygen conditions that can influence endothelial cell behavior and angiogenesis.
+# "vascular remodeling": Changes in the structure of blood vessels, involving endothelial cells.
+
+filtered_go_EC <- go_terms[go_terms$Term %in% go_terms$Term[grepl("endothelium|endothelial|angiogenesis|vascularization|inflammation|vascular permeability|platelet activation|shear stress|cell adhesion|smooth muscle contraction|endothelial dysfunction|nitric oxide production|extracellular matrix|hypoxia|vascular remodeling",go_terms$Term, ignore.case = TRUE)],]
+
+filtered_go_EC <- filtered_go_EC[filtered_go_EC$Ontology == "BP",]
+heart_endothelial_GOs <- unique(filtered_go_EC$go_id)
+
+GO.GSEA_seu <- read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/GSEA_Endothelial_HFpEF_wilcox_seurat.xlsx", rowNames=T)
+#Only significant
+GO.GSEA_seu <- GO.GSEA_seu[GO.GSEA_seu$p.adjust <= 0.05,]
+
+
+nr.inGO.seu = length(GO.GSEA_seu$ID[GO.GSEA_seu$ID %in% heart_endothelial_GOs])
+nr.total.seu = length(GO.GSEA_seu$ID)
+ratio.seu = nr.inGO.seu/nr.total.seu
+
+data.frame(Tool = "XAI_t-test",
+           value = ratio.seu)
+
+GO.GSEA_xai <- read.xlsx("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/GSEA_Endothelial_HFpEF_t_xai.xlsx", rowNames=T)
+#Only significant
+GO.GSEA_xai <- GO.GSEA_xai[GO.GSEA_xai$p.adjust <= 0.05,]
+
+nr.inGO.xai = length(GO.GSEA_xai$ID[GO.GSEA_xai$ID %in% heart_endothelial_GOs])
+nr.total.xai = length(GO.GSEA_xai$ID)
+ratio.xai = nr.inGO.xai/nr.total.xai
+```
+
+##12.3 For cell types
+
+```{r}
+#Defintions of cell type specific GO terms
+
+#CM
+filtered_go_Cardiomyocytes <- go_terms[go_terms$Term %in% go_terms$Term[grepl("heart|cardiac|muscle|myocardium|contraction|sarcomere|cardiogenesis|hypertrophy|electrophysiology|ion transport|gap junction|mitochondria|angiogenesis|apoptosis|fibrosis|calcium ion",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Cardiomyocytes <- filtered_go_Cardiomyocytes[filtered_go_Cardiomyocytes$Ontology == "BP",]
+filtered_go_Cardiomyocytes <- unique(filtered_go_Cardiomyocytes$go_id)
+#EC
+filtered_go_Endothelial <- go_terms[go_terms$Term %in% go_terms$Term[grepl("endothelium|endothelial|heart|angiogenesis|vascularization|inflammation|vascular permeability|platelet activation|shear stress|cell adhesion|smooth muscle contraction|endothelial dysfunction|nitric oxide production|extracellular matrix|hypoxia|vascular remodeling",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Endothelial <- filtered_go_Endothelial[filtered_go_Endothelial$Ontology == "BP",]
+filtered_go_Endothelial <- unique(filtered_go_Endothelial$go_id)
+#FB
+filtered_go_Fibroblasts <- go_terms[go_terms$Term %in% go_terms$Term[grepl("fibroblast|extracellular matrix|extracellular structure|wound healing|wounding|tissue repair|heart|connective tissue|collagen|fibronectin|mesenchymal",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Fibroblasts <- filtered_go_Fibroblasts[filtered_go_Fibroblasts$Ontology == "BP",]
+filtered_go_Fibroblasts <- unique(filtered_go_Fibroblasts$go_id)
+#PC
+filtered_go_Pericytes <- go_terms[go_terms$Term %in% go_terms$Term[grepl("Pericyte|Blood vessel morphogenesis|heart|Regulation of vascular permeability|Angiogenesis|Vascular smooth muscle cell development|actin filament|Basement membrane organization|mesenchymal|extracellular matrix",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Pericytes <- filtered_go_Pericytes[filtered_go_Pericytes$Ontology == "BP",]
+filtered_go_Pericytes <- unique(filtered_go_Pericytes$go_id)
+#IC
+filtered_go_Immune.cells <- go_terms[go_terms$Term %in% go_terms$Term[grepl("Immune response|heart|Inflammation|Leukocyte activation|Cytokine production|Antigen presentation|T cell activation|B cell differentiation|Immune cell migration|Macrophage activation|Immune system development|Interleukin signaling",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Immune.cells <- filtered_go_Immune.cells[filtered_go_Immune.cells$Ontology == "BP",]
+filtered_go_Immune.cells <- unique(filtered_go_Immune.cells$go_id)
+#SMC
+filtered_go_Smooth.Muscle <- go_terms[go_terms$Term %in% go_terms$Term[grepl("Muscle contraction|heart|Smooth muscle|Actin filament|Muscle development|Vascular smooth muscle|Vasoconstriction|Extracellular matrix organization|Vascular remodeling|Response to mechanical stimulus|Muscle hypertrophy",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Smooth.Muscle <- filtered_go_Smooth.Muscle[filtered_go_Smooth.Muscle$Ontology == "BP",]
+filtered_go_Smooth.Muscle <- unique(filtered_go_Smooth.Muscle$go_id)
+#NC
+filtered_go_Neuro <- go_terms[go_terms$Term %in% go_terms$Term[grepl("Neuron differentiation|Axon|Neurogenesis|heart|Neuronal|Synapse organization|Neurotransmitter release|Dendrite development|Axonogenesis|Neuronal|Neuron|Nerve growth factor signaling|membran potential",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Neuro <- filtered_go_Neuro[filtered_go_Neuro$Ontology == "BP",]
+filtered_go_Neuro <- unique(filtered_go_Neuro$go_id)
+
+cell_names <- c("Cardiomyocytes","Endothelial","Fibroblasts","Immune.cells","Neuro","Pericytes","Smooth.Muscle")
+path_GSEA <- "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/"
+
+#collect results dataframe
+df.result <- data.frame(Celltype = character(), 
+                        Seurat_Prec = numeric(),
+                        Seurat_Rec = numeric(),
+                        Seurat_F1 = numeric(),
+                         MAST_Prec = numeric(),
+                        MAST_Rec = numeric(),
+                        MAST_F1 = numeric(),
+                        XAI_Prec = numeric(),
+                        XAI_Rec = numeric(),
+                        XAI_F1 = numeric(), 
+                        stringsAsFactors = FALSE)
+
+for (celltype in cell_names) {
+  
+  #load dynamically GO IDs for the corresponding celltype
+  go_id <- paste0("filtered_go_",celltype)
+  go_id <- get(go_id)
+  
+  #Seurat ratio
+  GO.GSEA_seu <- read.xlsx(paste0(path_GSEA,"GSEA_",celltype,"_HFpEF_wilcox_seurat.xlsx"), rowNames=T)
+  GO.GSEA_seu <- GO.GSEA_seu[GO.GSEA_seu$p.adjust <= 0.05,] #Only significant
+  
+  nr.inGO.seu = length(GO.GSEA_seu$ID[GO.GSEA_seu$ID %in% go_id])
+  nr.total.seu = length(GO.GSEA_seu$ID)
+  ratio.seu = nr.inGO.seu/nr.total.seu
+  
+  #Precision and Recall Seurat
+  TP.Seu = nr.inGO.seu
+  FP.Seu = nr.total.seu - TP.Seu
+  FN.Seu = length(go_id) - TP.Seu
+  
+  Prec.Seu  = TP.Seu / (TP.Seu+FP.Seu)
+  Rec.Seu = TP.Seu / (TP.Seu+FN.Seu)
+  
+  F1.Seu = 2*(Prec.Seu*Rec.Seu/(Prec.Seu+Rec.Seu))
+  
+  
+  #MAST ratio
+  GO.GSEA_MAST <- read.xlsx(paste0(path_GSEA,"GSEA_",celltype,"_HFpEF_MAST_seurat.xlsx"), rowNames=T)
+  GO.GSEA_MAST <- GO.GSEA_MAST[GO.GSEA_MAST$p.adjust <= 0.05,] #Only significant
+  
+  nr.inGO.MAST = length(GO.GSEA_MAST$ID[GO.GSEA_MAST$ID %in% go_id])
+  nr.total.MAST = length(GO.GSEA_MAST$ID)
+  ratio.MAST = nr.inGO.MAST/nr.total.MAST
+  
+  #Precision and Recall MAST
+  TP.MAST = nr.inGO.MAST
+  FP.MAST = nr.total.MAST - TP.MAST
+  FN.MAST = length(go_id) - TP.MAST
+  
+  Prec.MAST  = TP.MAST / (TP.MAST+FP.MAST)
+  Rec.MAST = TP.MAST / (TP.MAST+FN.MAST)
+  
+  F1.MAST = 2*(Prec.MAST*Rec.MAST/(Prec.MAST+Rec.MAST))
+  
+  #XAI ratio
+  GO.GSEA_xai <- read.xlsx(paste0(path_GSEA,"GSEA_",celltype,"_HFpEF_t_xai.xlsx"), rowNames=T)
+  GO.GSEA_xai <- GO.GSEA_xai[GO.GSEA_xai$p.adjust <= 0.05,] #Only significant
+  
+  nr.inGO.xai = length(GO.GSEA_xai$ID[GO.GSEA_xai$ID %in% go_id])
+  nr.total.xai = length(GO.GSEA_xai$ID)
+  ratio.xai = nr.inGO.xai/nr.total.xai
+  
+  #Precision and Recall XAI
+  TP.XAI = nr.inGO.xai
+  FP.XAI = nr.total.xai - TP.XAI
+  FN.XAI = length(go_id) - TP.XAI
+  
+  Prec.XAI  = TP.XAI / (TP.XAI+FP.XAI)
+  Rec.XAI = TP.XAI / (TP.XAI+FN.XAI)
+  
+  F1.XAI = 2*(Prec.XAI*Rec.XAI/(Prec.XAI+Rec.XAI))
+  
+  #rbind results to the dataframe
+  df.result <- rbind(df.result, data.frame(Celltype = celltype,
+                                           Seurat_Prec = Prec.Seu,
+                                           Seurat_Rec = Rec.Seu,
+                                           Seurat_F1 = F1.Seu,
+                                           MAST_Prec = Prec.MAST,
+                                           MAST_Rec = Rec.MAST,
+                                           MAST_F1 = F1.MAST,
+                                           XAI_Prec = Prec.XAI,
+                                           XAI_Rec = Rec.XAI,
+                                           XAI_F1 = F1.XAI, 
+                                           stringsAsFactors = FALSE))
+  
+}
+
+#Select which things to show: F1 or Recall and Precision
+df.result %<>% dplyr::select(-Seurat_Prec,-Seurat_Rec, -XAI_Prec,-XAI_Rec, -MAST_Prec, -MAST_Rec)
+
+df.result.melt <- reshape2::melt(df.result)
+
+theme_box <- function(){
+  theme_bw() +
+    theme(
+      panel.border = element_rect(colour = "black", fill = NA, size = 1),
+      # panel.grid.major = element_blank(),
+      # panel.grid.minor = element_blank(),
+      panel.grid.major = element_line(colour = "grey90", linetype = "dotted"),
+      panel.grid.minor = element_line(colour = "grey90", linetype = "dotted"),
+      # strip.placement = "outside",
+      axis.ticks.x = element_blank(),
+      axis.line = element_line(colour = "black"),
+      #facet_grid colors
+      strip.background = element_rect(fill = "lightgrey", colour = "black", size = 1),
+      strip.text = element_text(colour = "black", size = 12)
+    )
+}
+
+df.result.melt$variable <- plyr::revalue(df.result.melt$variable,
+                                  c("Seurat_F1" = "Expr-Wilcoxon",
+                                    "MAST_F1" = "Expr-MAST",
+                                    "XAI_F1" = "Shap-t"))
+df.result.melt$Celltype <- plyr::revalue(df.result.melt$Celltype,
+                                  c("Immune.cells" = "Immune cells",
+                                    "Smooth.Muscle" = "Smooth muscle"))
+
+df.result.melt$variable <- factor(df.result.melt$variable, levels = c("Shap-t","Expr-MAST","Expr-Wilcoxon"))
+
+
+dot_colours <- c("maroon","#2F4F4F","#DAA520","#2F4F4F", "tomato", "#b35900", "#236e00", "#7ad500", "#881800", "#004655","#6fa9a9","#DAA520")
+
+# df.result_list.dis$Group <- ifelse(grepl("t-test", df.result_list.dis$Tool),"t-test", "Wilcoxon")
+# df.result_list.dis$Group <- factor(df.result_list.dis$Group, levels = c("Wilcoxon","t-test"))
+disease <- "HFpEF"
+
+
+
+ggplot(df.result.melt, aes(x=Celltype, y=value, shape=variable, color=variable))+
+  geom_point(aes(shape=variable, size=variable), position = position_dodge(width = 0.35))+
+  theme_box() +
+  facet_grid(~Celltype, scales = "free")+
+  scale_color_manual(name="Value type",
+                     values =  dot_colours)+
+  scale_shape_manual(name="Value type",
+                     values = c(17,16,18))+
+  scale_size_manual(name="Value type",
+                    values = c(4,4,4))+
+  labs(title = paste0("GSEA - Comparison of Human ", disease," vs healthy"), y = "F1 - Score", hjust=0.5) +
+  theme(axis.text.x = element_blank(),
+        # axis.text.x = element_text(color = "black", size = 14,angle = 45,hjust = 1, family = "Helvetica"),
+        axis.text.y = element_text(color = "black", size = 14, family = "Helvetica"),
+        axis.title.x = element_blank(),
+        axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+        plot.title = element_text(size = 14, hjust = 0, face ="bold", family = "Helvetica"),
+        axis.line = element_line(color = "black"),
+        strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+        legend.text = element_text(size = 10, color = "black", family = "Helvetica"),
+        legend.title = element_text(size = 10, color = "black", family = "Helvetica", face = "bold", hjust =0.5),
+        panel.spacing = unit(0, "lines"))
+  # + ggprism::annotation_ticks(sides = "lrbt", type = "major", outside = F)
+        
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/scatterplots/Figure4/Human_GSEA_F1_score_",disease,"_vs_healthy_with_MAST.pdf"), width = 12, height = 2.75)
+dev.off()
+
+```
+
+##12.4 For cell types using(fc + p_values)
+
+```{r}
+#Defintions of cell type specific GO terms
+
+#CM
+filtered_go_Cardiomyocytes <- go_terms[go_terms$Term %in% go_terms$Term[grepl("heart|cardiac|muscle|myocardium|contraction|sarcomere|cardiogenesis|hypertrophy|electrophysiology|ion transport|gap junction|mitochondria|angiogenesis|apoptosis|fibrosis|calcium ion",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Cardiomyocytes <- filtered_go_Cardiomyocytes[filtered_go_Cardiomyocytes$Ontology == "BP",]
+filtered_go_Cardiomyocytes <- unique(filtered_go_Cardiomyocytes$go_id)
+#EC
+filtered_go_Endothelial <- go_terms[go_terms$Term %in% go_terms$Term[grepl("endothelium|endothelial|heart|angiogenesis|vascularization|inflammation|vascular permeability|platelet activation|shear stress|cell adhesion|smooth muscle contraction|endothelial dysfunction|nitric oxide production|extracellular matrix|hypoxia|vascular remodeling",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Endothelial <- filtered_go_Endothelial[filtered_go_Endothelial$Ontology == "BP",]
+filtered_go_Endothelial <- unique(filtered_go_Endothelial$go_id)
+#FB
+filtered_go_Fibroblasts <- go_terms[go_terms$Term %in% go_terms$Term[grepl("fibroblast|extracellular matrix|extracellular structure|wound healing|wounding|tissue repair|heart|connective tissue|collagen|fibronectin|mesenchymal",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Fibroblasts <- filtered_go_Fibroblasts[filtered_go_Fibroblasts$Ontology == "BP",]
+filtered_go_Fibroblasts <- unique(filtered_go_Fibroblasts$go_id)
+#PC
+filtered_go_Pericytes <- go_terms[go_terms$Term %in% go_terms$Term[grepl("Pericyte|Blood vessel morphogenesis|heart|cardiac|Regulation of vascular permeability|Vascular smooth muscle cell development|actin filament|Basement membrane organization|mesenchymal|extracellular matrix",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Pericytes <- filtered_go_Pericytes[filtered_go_Pericytes$Ontology == "BP",]
+filtered_go_Pericytes <- unique(filtered_go_Pericytes$go_id)
+length(filtered_go_Pericytes)
+#IC
+filtered_go_Immune.cells <- go_terms[go_terms$Term %in% go_terms$Term[grepl("Immune response|heart|Inflammation|Leukocyte activation|Cytokine production|Antigen presentation|T cell activation|B cell differentiation|Immune cell migration|Macrophage activation|Immune system development|Interleukin signaling",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Immune.cells <- filtered_go_Immune.cells[filtered_go_Immune.cells$Ontology == "BP",]
+filtered_go_Immune.cells <- unique(filtered_go_Immune.cells$go_id)
+#SMC
+filtered_go_Smooth.Muscle <- go_terms[go_terms$Term %in% go_terms$Term[grepl("Muscle contraction|heart|Smooth muscle|Actin filament|Muscle development|Vascular smooth muscle|Vasoconstriction|Extracellular matrix organization|Vascular remodeling|Response to mechanical stimulus|Muscle hypertrophy",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Smooth.Muscle <- filtered_go_Smooth.Muscle[filtered_go_Smooth.Muscle$Ontology == "BP",]
+filtered_go_Smooth.Muscle <- unique(filtered_go_Smooth.Muscle$go_id)
+#NC
+filtered_go_Neuro <- go_terms[go_terms$Term %in% go_terms$Term[grepl("Neuron differentiation|Axon|Neurogenesis|heart|Neuronal|Synapse organization|Neurotransmitter release|Dendrite development|Axonogenesis|Neuronal|Neuron|Nerve growth factor signaling|membran potential",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Neuro <- filtered_go_Neuro[filtered_go_Neuro$Ontology == "BP",]
+filtered_go_Neuro <- unique(filtered_go_Neuro$go_id)
+
+cell_names <- c("Cardiomyocytes","Endothelial","Fibroblasts","Immune.cells","Neuro","Pericytes","Smooth.Muscle")
+path_GSEA <- "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/"
+
+#collect results dataframe
+df.result <- data.frame(Celltype = character(), 
+                        Seurat_Prec = numeric(),
+                        Seurat_Rec = numeric(),
+                        Seurat_F1 = numeric(),
+                         MAST_Prec = numeric(),
+                        MAST_Rec = numeric(),
+                        MAST_F1 = numeric(),
+                        XAI_Prec = numeric(),
+                        XAI_Rec = numeric(),
+                        XAI_F1 = numeric(), 
+                        stringsAsFactors = FALSE)
+
+for (celltype in cell_names) {
+  
+  #load dynamically GO IDs for the corresponding celltype
+  go_id <- paste0("filtered_go_",celltype)
+  go_id <- get(go_id)
+  
+  #Seurat ratio
+  GO.GSEA_seu <- read.xlsx(paste0(path_GSEA,"log2fc_div_p/GSEA_",celltype,"_HFpEF_wilcox_seurat_fc_p.xlsx"), rowNames=T)
+  GO.GSEA_seu <- GO.GSEA_seu[GO.GSEA_seu$p.adjust <= 0.05,] #Only significant
+  
+  nr.inGO.seu = length(GO.GSEA_seu$ID[GO.GSEA_seu$ID %in% go_id])
+  nr.total.seu = length(GO.GSEA_seu$ID)
+  ratio.seu = nr.inGO.seu/nr.total.seu
+  
+  #Precision and Recall Seurat
+  TP.Seu = nr.inGO.seu
+  FP.Seu = nr.total.seu - TP.Seu
+  FN.Seu = length(go_id) - TP.Seu
+  
+  Prec.Seu  = TP.Seu / (TP.Seu+FP.Seu)
+  Rec.Seu = TP.Seu / (TP.Seu+FN.Seu)
+  
+  F1.Seu = 2*(Prec.Seu*Rec.Seu/(Prec.Seu+Rec.Seu))
+  
+  
+  #MAST ratio
+  GO.GSEA_MAST <- read.xlsx(paste0(path_GSEA,"log2fc_div_p/GSEA_",celltype,"_HFpEF_MAST_seurat_fc_p.xlsx"), rowNames=T)
+  GO.GSEA_MAST <- GO.GSEA_MAST[GO.GSEA_MAST$p.adjust <= 0.05,] #Only significant
+  
+  nr.inGO.MAST = length(GO.GSEA_MAST$ID[GO.GSEA_MAST$ID %in% go_id])
+  nr.total.MAST = length(GO.GSEA_MAST$ID)
+  ratio.MAST = nr.inGO.MAST/nr.total.MAST
+  
+  #Precision and Recall MAST
+  TP.MAST = nr.inGO.MAST
+  FP.MAST = nr.total.MAST - TP.MAST
+  FN.MAST = length(go_id) - TP.MAST
+  
+  Prec.MAST  = TP.MAST / (TP.MAST+FP.MAST)
+  Rec.MAST = TP.MAST / (TP.MAST+FN.MAST)
+  
+  F1.MAST = 2*(Prec.MAST*Rec.MAST/(Prec.MAST+Rec.MAST))
+  
+  #XAI ratio
+  GO.GSEA_xai <- read.xlsx(paste0(path_GSEA,"log2fc/GSEA_",celltype,"_HFpEF_t_XAI.xlsx"), rowNames=T)
+  GO.GSEA_xai <- GO.GSEA_xai[GO.GSEA_xai$p.adjust <= 0.05,] #Only significant
+  
+  nr.inGO.xai = length(GO.GSEA_xai$ID[GO.GSEA_xai$ID %in% go_id])
+  nr.total.xai = length(GO.GSEA_xai$ID)
+  ratio.xai = nr.inGO.xai/nr.total.xai
+  
+  #Precision and Recall XAI
+  TP.XAI = nr.inGO.xai
+  FP.XAI = nr.total.xai - TP.XAI
+  FN.XAI = length(go_id) - TP.XAI
+  
+  Prec.XAI  = TP.XAI / (TP.XAI+FP.XAI)
+  Rec.XAI = TP.XAI / (TP.XAI+FN.XAI)
+  
+  F1.XAI = 2*(Prec.XAI*Rec.XAI/(Prec.XAI+Rec.XAI))
+  
+  #rbind results to the dataframe
+  df.result <- rbind(df.result, data.frame(Celltype = celltype,
+                                           Seurat_Prec = Prec.Seu,
+                                           Seurat_Rec = Rec.Seu,
+                                           Seurat_F1 = F1.Seu,
+                                           MAST_Prec = Prec.MAST,
+                                           MAST_Rec = Rec.MAST,
+                                           MAST_F1 = F1.MAST,
+                                           XAI_Prec = Prec.XAI,
+                                           XAI_Rec = Rec.XAI,
+                                           XAI_F1 = F1.XAI, 
+                                           stringsAsFactors = FALSE))
+  
+}
+
+#Select which things to show: F1 or Recall and Precision
+df.result_F1 <- df.result %>% dplyr::select(-Seurat_Prec,-Seurat_Rec, -XAI_Prec,-XAI_Rec, -MAST_Prec, -MAST_Rec)
+df.result_prec <- df.result %>% dplyr::select(-Seurat_F1,-Seurat_Rec, -XAI_F1,-XAI_Rec, -MAST_F1, -MAST_Rec)
+
+df.result.F1.melt <- reshape2::melt(df.result_F1)
+df.result_prec.melt <- reshape2::melt(df.result_prec)
+
+theme_box <- function(){
+  theme_bw() +
+    theme(
+      panel.border = element_rect(colour = "black", fill = NA, size = 1),
+      # panel.grid.major = element_blank(),
+      # panel.grid.minor = element_blank(),
+      panel.grid.major = element_line(colour = "grey90", linetype = "dotted"),
+      panel.grid.minor = element_line(colour = "grey90", linetype = "dotted"),
+      # strip.placement = "outside",
+      axis.ticks.x = element_blank(),
+      axis.line = element_line(colour = "black"),
+      #facet_grid colors
+      strip.background = element_rect(fill = "lightgrey", colour = "black", size = 1),
+      strip.text = element_text(colour = "black", size = 12)
+    )
+}
+
+df.result.F1.melt$variable <- plyr::revalue(df.result.F1.melt$variable,
+                                  c("Seurat_F1" = "Expr-Wilcoxon",
+                                    "MAST_F1" = "Expr-MAST",
+                                    "XAI_F1" = "Shap-t"))
+df.result.F1.melt$Celltype <- plyr::revalue(df.result.F1.melt$Celltype,
+                                  c("Immune.cells" = "Immune cells",
+                                    "Smooth.Muscle" = "Smooth muscle"))
+
+df.result.F1.melt$variable <- factor(df.result.F1.melt$variable, levels = c("Shap-t","Expr-MAST","Expr-Wilcoxon"))
+
+
+dot_colours <- c("maroon","#2F4F4F","#DAA520","#2F4F4F", "tomato", "#b35900", "#236e00", "#7ad500", "#881800", "#004655","#6fa9a9","#DAA520")
+
+# df.result_list.dis$Group <- ifelse(grepl("t-test", df.result_list.dis$Tool),"t-test", "Wilcoxon")
+# df.result_list.dis$Group <- factor(df.result_list.dis$Group, levels = c("Wilcoxon","t-test"))
+disease <- "HFpEF"
+
+
+
+ggplot(df.result.F1.melt, aes(x=Celltype, y=value, shape=variable, color=variable))+
+  geom_point(aes(shape=variable, size=variable))+
+  theme_box() +
+  facet_grid(~Celltype, scales = "free")+
+  scale_color_manual(name="Value type",
+                     values =  dot_colours)+
+  scale_shape_manual(name="Value type",
+                     values = c(17,16,18))+
+  scale_size_manual(name="Value type",
+                    values = c(4,4,4))+
+  labs(title = paste0("GSEA - Comparison of Human ", disease," vs healthy"), y = "F1 - Score", hjust=0.5) +
+  theme(axis.text.x = element_blank(),
+        # axis.text.x = element_text(color = "black", size = 14,angle = 45,hjust = 1, family = "Helvetica"),
+        axis.text.y = element_text(color = "black", size = 14, family = "Helvetica"),
+        axis.title.x = element_blank(),
+        axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+        plot.title = element_text(size = 14, hjust = 0, face ="bold", family = "Helvetica"),
+        axis.line = element_line(color = "black"),
+        strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+        legend.text = element_text(size = 10, color = "black", family = "Helvetica"),
+        legend.title = element_text(size = 10, color = "black", family = "Helvetica", face = "bold", hjust =0.5),
+        panel.spacing = unit(0, "lines"))
+  # + ggprism::annotation_ticks(sides = "lrbt", type = "major", outside = F)
+        
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/scatterplots/Figure4/Human_GSEA_F1_score_",disease,"_vs_healthy_with_MAST.pdf"), width = 12, height = 2.75)
+dev.off()
+
+
+
+df.result_prec.melt$variable <- plyr::revalue(df.result_prec.melt$variable,
+                                  c("Seurat_Prec" = "Expr-Wilcoxon",
+                                    "MAST_Prec" = "Expr-MAST",
+                                    "XAI_Prec" = "Shap-t"))
+df.result_prec.melt$Celltype <- plyr::revalue(df.result_prec.melt$Celltype,
+                                  c("Immune.cells" = "Immune cells",
+                                    "Smooth.Muscle" = "Smooth muscle"))
+
+df.result_prec.melt$variable <- factor(df.result_prec.melt$variable, levels = c("Shap-t","Expr-MAST","Expr-Wilcoxon"))
+
+
+dot_colours <- c("maroon","#2F4F4F","#DAA520","#2F4F4F", "tomato", "#b35900", "#236e00", "#7ad500", "#881800", "#004655","#6fa9a9","#DAA520")
+
+# df.result_list.dis$Group <- ifelse(grepl("t-test", df.result_list.dis$Tool),"t-test", "Wilcoxon")
+# df.result_list.dis$Group <- factor(df.result_list.dis$Group, levels = c("Wilcoxon","t-test"))
+disease <- "HFpEF"
+
+
+
+ggplot(df.result_prec.melt, aes(x=Celltype, y=value, shape=variable, color=variable))+
+  geom_point(aes(shape=variable, size=variable))+
+  theme_box() +
+  facet_grid(~Celltype, scales = "free")+
+  scale_color_manual(name="Value type",
+                     values =  dot_colours)+
+  scale_shape_manual(name="Value type",
+                     values = c(17,16,18))+
+  scale_size_manual(name="Value type",
+                    values = c(4,4,4))+
+  labs(title = paste0("GSEA - Comparison of Human ", disease," vs healthy"), y = "Precision - Score", hjust=0.5) +
+  theme(axis.text.x = element_blank(),
+        # axis.text.x = element_text(color = "black", size = 14,angle = 45,hjust = 1, family = "Helvetica"),
+        axis.text.y = element_text(color = "black", size = 14, family = "Helvetica"),
+        axis.title.x = element_blank(),
+        axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+        plot.title = element_text(size = 14, hjust = 0, face ="bold", family = "Helvetica"),
+        axis.line = element_line(color = "black"),
+        strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+        legend.text = element_text(size = 10, color = "black", family = "Helvetica"),
+        legend.title = element_text(size = 10, color = "black", family = "Helvetica", face = "bold", hjust =0.5),
+        panel.spacing = unit(0, "lines"))
+  # + ggprism::annotation_ticks(sides = "lrbt", type = "major", outside = F)
+        
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/scatterplots/Figure4/Human_GSEA_prec_score_",disease,"_vs_healthy_with_MAST.pdf"), width = 12, height = 2.75)
+dev.off()
+
+```
+
+#13. GO analysis DXG versus DEG
+```{r}
+
+#initalize cell type and disease, set testmethod to load
+test.Seurat <- c("wilcox_Test", "MAST")
+disease <- "HFpEF"
+cell_names <- c("Cardiomyocytes","Endothelial","Fibroblasts","Immune.cells","Neuro","Pericytes","Smooth.Muscle")
+
+for (method in test.Seurat) {
+  print(method)
+  for (cell_type in cell_names) {
+    
+    seurat_DGE <- openxlsx::read.xlsx(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_Seurat_",method,"_Human_HF_min_pct_0_logfc_0_for_GSEA.xlsx"))
+    
+    if (method == "wilcox_Test") {
+      method.test <- "wilcox"      
+    } else{
+      method.test <- "MAST"
+    }
+    
+    seurat_DGE_sub <- seurat_DGE[seurat_DGE$disease == disease & seurat_DGE$celltype == cell_type & seurat_DGE$testmethod == method.test, ]
+    
+    #Apply default thresholds for DEGs
+    seurat_DGE_sub <- seurat_DGE_sub[seurat_DGE_sub$p_val_adj < 0.05 & abs(seurat_DGE_sub$avg_log2FC) > 0.1 & (seurat_DGE_sub$pct.1 > 0.1 | seurat_DGE_sub$pct.2 > 0.1),]
+    
+    OrgDb = org.Hs.eg.db
+    # define universe with ENTREZIDs as data frames
+    egallgenes <- as.vector(rownames(Seu.Obj.annotated)) 
+    egallgenes = clusterProfiler::bitr(egallgenes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+    
+    # differentially regulated genes with ENTREZIDs as data frame
+    seurat_DGE_sub_up <- seurat_DGE_sub[seurat_DGE_sub$avg_log2FC > 0,]
+    seurat_DGE_sub_down <- seurat_DGE_sub[seurat_DGE_sub$avg_log2FC < 0,]
+    
+    #comb 
+    egdiffgenes_comb <- as.vector(seurat_DGE_sub$rowname)
+    egdiffgenes_comb = clusterProfiler::bitr(egdiffgenes_comb, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+    
+    #up genes
+    egdiffgenes_up <- as.vector(seurat_DGE_sub_up$rowname)
+    egdiffgenes_up = clusterProfiler::bitr(egdiffgenes_up, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+    
+    
+    #down genes
+    egdiffgenes_down <- as.vector(seurat_DGE_sub_down$rowname)
+    egdiffgenes_down = clusterProfiler::bitr(egdiffgenes_down, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+    
+    #up go
+    ego_up <- enrichGO(gene = egdiffgenes_up[,2],
+                    OrgDb = OrgDb,
+                    keyType = "ENTREZID",
+                    ont = "BP",
+                    universe = egallgenes[,2],
+                    pAdjustMethod = "BH", 
+                    qvalueCutoff = 0.05, 
+                    minGSSize = 2,
+                    maxGSSize = 500,
+                    readable = TRUE,
+                    pool = FALSE)
+    
+    ego_up_save <- setReadable(ego_up, OrgDb = OrgDb, keyType = "ENTREZID")
+    write.xlsx(ego_up_save@result,paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GOs/up/UP_genes_GO_",cell_type,"_",disease,"_",method,"_seurat.xlsx"), rowNames=T)
+    
+    #down go
+    ego_down <- enrichGO(gene = egdiffgenes_down[,2],
+                    OrgDb = OrgDb,
+                    keyType = "ENTREZID",
+                    ont = "BP",
+                    universe = egallgenes[,2],
+                    pAdjustMethod = "BH", 
+                    qvalueCutoff = 0.05, 
+                    minGSSize = 2,
+                    maxGSSize = 500,
+                    readable = TRUE,
+                    pool = FALSE)
+    
+    ego_down_save <- setReadable(ego_down, OrgDb = OrgDb, keyType = "ENTREZID")
+    write.xlsx(ego_down_save@result,paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GOs/down/DOWN_genes_GO_",cell_type,"_",disease,"_",method,"_seurat.xlsx"), rowNames=T)
+    
+    #down go
+    ego_comb <- enrichGO(gene = egdiffgenes_comb[,2],
+                    OrgDb = OrgDb,
+                    keyType = "ENTREZID",
+                    ont = "BP",
+                    universe = egallgenes[,2],
+                    pAdjustMethod = "BH", 
+                    qvalueCutoff = 0.05, 
+                    minGSSize = 2,
+                    maxGSSize = 500,
+                    readable = TRUE,
+                    pool = FALSE)
+    
+    ego_comb_save <- setReadable(ego_comb, OrgDb = OrgDb, keyType = "ENTREZID")
+    write.xlsx(ego_comb_save@result,paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GOs/comb/COMB_genes_GO_",cell_type,"_",disease,"_",method,"_seurat.xlsx"), rowNames=T)
+    
+  }
+}
+#DXG
+for (cell_type in cell_names) {
+  #set class corresponding to disease
+  class_xai <- switch(disease,
+                      "Hypertrophy" = "class_9",
+                      "HFpEF" = "class_10",
+                      "HFrEF" = "class_11",
+                      NULL)
+
+  disease_xai <- disease
+  celltype_xai <- cell_type
+  if (disease_xai == "Hypertrophy") {disease_xai <- "AS"}
+  if (celltype_xai  == "Immune.cells") {celltype_xai <- "ImmuneCells"}
+  if (celltype_xai  == "Smooth.Muscle") {celltype_xai <- "SmoothMuscle"}
+
+  #Xai_0.1_0.5_0.1
+  xai_path <- paste0("/media/Storage/anndata_shap/Z_SHAP/background_200_balanced_data/DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5_avgExp_0.1_p_0.05/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5_avgExp_0.1_p_0.05/t_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx")
+
+  xai_DGE <- openxlsx::read.xlsx(xai_path)
+  
+  # Get information with Inverse and Direct into foldchange by changing inverse markers sign in the folchange
+  xai_DGE$avg_cube_root_FC <- ifelse(xai_DGE$predictor_type == "Inverse",(xai_DGE$avg_cube_root_FC*-1),xai_DGE$avg_cube_root_FC)
+  
+  # differentially regulated genes with ENTREZIDs as data frame
+  xai_DXG_sub_up <- xai_DGE[xai_DGE$avg_cube_root_FC > 0,]
+  xai_DXG_sub_down <- xai_DGE[xai_DGE$avg_cube_root_FC < 0,]
+
+  #comb genes
+  egdiffgenes_comb <- as.vector(xai_DGE$Feature)
+  egdiffgenes_comb = clusterProfiler::bitr(egdiffgenes_comb, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+  
+  #up genes
+  egdiffgenes_up <- as.vector(xai_DXG_sub_up$Feature)
+  egdiffgenes_up = clusterProfiler::bitr(egdiffgenes_up, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+
+  #down genes
+  egdiffgenes_down <- as.vector(xai_DXG_sub_down$Feature)
+  egdiffgenes_down = clusterProfiler::bitr(egdiffgenes_down, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+
+  #up go
+  ego_up <- enrichGO(gene = egdiffgenes_up[,2],
+                  OrgDb = OrgDb,
+                  keyType = "ENTREZID",
+                  ont = "BP",
+                  universe = egallgenes[,2],
+                  pAdjustMethod = "BH",
+                  qvalueCutoff = 0.05,
+                  minGSSize = 2,
+                  maxGSSize = 500,
+                  readable = TRUE,
+                  pool = FALSE)
+
+  ego_up_save <- setReadable(ego_up, OrgDb = OrgDb, keyType = "ENTREZID")
+  write.xlsx(ego_up_save@result,paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GOs/up/UP_genes_GO_",cell_type,"_",disease,"_XAI_DXG.xlsx"), rowNames=T)
+
+  #down go
+  ego_down <- enrichGO(gene = egdiffgenes_down[,2],
+                  OrgDb = OrgDb,
+                  keyType = "ENTREZID",
+                  ont = "BP",
+                  universe = egallgenes[,2],
+                  pAdjustMethod = "BH",
+                  qvalueCutoff = 0.05,
+                  minGSSize = 2,
+                  maxGSSize = 500,
+                  readable = TRUE,
+                  pool = FALSE)
+
+  ego_down_save <- setReadable(ego_down, OrgDb = OrgDb, keyType = "ENTREZID")
+  write.xlsx(ego_down_save@result,paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GOs/down/DOWN_genes_GO_",cell_type,"_",disease,"_XAI_DXG.xlsx"), rowNames=T)
+  
+  #comb go
+  ego_comb <- enrichGO(gene = egdiffgenes_comb[,2],
+                  OrgDb = OrgDb,
+                  keyType = "ENTREZID",
+                  ont = "BP",
+                  universe = egallgenes[,2],
+                  pAdjustMethod = "BH",
+                  qvalueCutoff = 0.05,
+                  minGSSize = 2,
+                  maxGSSize = 500,
+                  readable = TRUE,
+                  pool = FALSE)
+
+  ego_comb_save <- setReadable(ego_comb, OrgDb = OrgDb, keyType = "ENTREZID")
+  write.xlsx(ego_comb_save@result,paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GOs/comb/COMB_genes_GO_",cell_type,"_",disease,"_XAI_DXG.xlsx"), rowNames=T)
+  
+}
+```
+
+##13.1 GO score calculation in HFpEF (similar to 12. but with GO results)
+```{r}
+library(GO.db)
+go_terms <- as.data.frame(GOTERM) # load all existing terms
+#CM
+filtered_go_Cardiomyocytes <- go_terms[go_terms$Term %in% go_terms$Term[grepl("heart|cardiac|muscle|myocardium|contraction|sarcomere|cardiogenesis|hypertrophy|electrophysiology|ion transport|gap junction|mitochondria|angiogenesis|apoptosis|fibrosis|calcium ion",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Cardiomyocytes <- filtered_go_Cardiomyocytes[filtered_go_Cardiomyocytes$Ontology == "BP",]
+filtered_go_Cardiomyocytes <- unique(filtered_go_Cardiomyocytes$go_id)
+#EC
+filtered_go_Endothelial <- go_terms[go_terms$Term %in% go_terms$Term[grepl("endothelium|endothelial|heart|angiogenesis|vascularization|inflammation|vascular permeability|platelet activation|shear stress|cell adhesion|smooth muscle contraction|endothelial dysfunction|nitric oxide production|extracellular matrix|hypoxia|vascular remodeling",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Endothelial <- filtered_go_Endothelial[filtered_go_Endothelial$Ontology == "BP",]
+filtered_go_Endothelial <- unique(filtered_go_Endothelial$go_id)
+#FB
+filtered_go_Fibroblasts <- go_terms[go_terms$Term %in% go_terms$Term[grepl("fibroblast|extracellular matrix|extracellular structure|wound healing|wounding|tissue repair|heart|connective tissue|collagen|fibronectin|mesenchymal",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Fibroblasts <- filtered_go_Fibroblasts[filtered_go_Fibroblasts$Ontology == "BP",]
+filtered_go_Fibroblasts <- unique(filtered_go_Fibroblasts$go_id)
+#PC
+filtered_go_Pericytes <- go_terms[go_terms$Term %in% go_terms$Term[grepl("Pericyte|Blood vessel morphogenesis|heart|Regulation of vascular permeability|Angiogenesis|Vascular smooth muscle cell development|Basement membrane organization|mesenchymal|extracellular matrix",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Pericytes <- filtered_go_Pericytes[filtered_go_Pericytes$Ontology == "BP",]
+filtered_go_Pericytes <- unique(filtered_go_Pericytes$go_id)
+#IC
+filtered_go_Immune.cells <- go_terms[go_terms$Term %in% go_terms$Term[grepl("Immune response|heart|Inflammation|Leukocyte activation|Cytokine production|Antigen presentation|T cell activation|B cell differentiation|Immune cell migration|Macrophage activation|Immune system development|Interleukin signaling",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Immune.cells <- filtered_go_Immune.cells[filtered_go_Immune.cells$Ontology == "BP",]
+filtered_go_Immune.cells <- unique(filtered_go_Immune.cells$go_id)
+#SMC
+filtered_go_Smooth.Muscle <- go_terms[go_terms$Term %in% go_terms$Term[grepl("Muscle contraction|heart|Smooth muscle|Actin filament|Muscle development|Vascular smooth muscle|Vasoconstriction|Extracellular matrix organization|Vascular remodeling|Response to mechanical stimulus|Muscle hypertrophy",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Smooth.Muscle <- filtered_go_Smooth.Muscle[filtered_go_Smooth.Muscle$Ontology == "BP",]
+filtered_go_Smooth.Muscle <- unique(filtered_go_Smooth.Muscle$go_id)
+#NC
+filtered_go_Neuro <- go_terms[go_terms$Term %in% go_terms$Term[grepl("Neuron differentiation|Axon|Neurogenesis|heart|Neuronal|Synapse organization|Neurotransmitter release|Dendrite development|Axonogenesis|Neuronal|Neuron|Nerve growth factor signaling|membran potential",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Neuro <- filtered_go_Neuro[filtered_go_Neuro$Ontology == "BP",]
+filtered_go_Neuro <- unique(filtered_go_Neuro$go_id)
+
+cell_names <- c("Cardiomyocytes","Endothelial","Fibroblasts","Immune.cells","Neuro","Pericytes","Smooth.Muscle")
+path_GO <- "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GOs/down/"
+
+#collect results dataframe
+df.result <- data.frame(Celltype = character(), 
+                        Seurat_Prec = numeric(),
+                        Seurat_Rec = numeric(),
+                        Seurat_F1 = numeric(),
+                         MAST_Prec = numeric(),
+                        MAST_Rec = numeric(),
+                        MAST_F1 = numeric(),
+                        XAI_Prec = numeric(),
+                        XAI_Rec = numeric(),
+                        XAI_F1 = numeric(), 
+                        stringsAsFactors = FALSE)
+
+for (celltype in cell_names) {
+  
+  #load dynamically GO IDs for the corresponding celltype
+  go_id <- paste0("filtered_go_",celltype)
+  go_id <- get(go_id)
+  
+  #Seurat ratio
+  GO.term_seu <- read.xlsx(paste0(path_GO,"DOWN_genes_GO_",celltype,"_HFpEF_wilcox_Test_seurat.xlsx"), rowNames=T)
+  GO.term_seu <- GO.term_seu[GO.term_seu$p.adjust <= 0.05,] #Only significant
+  
+  nr.inGO.seu = length(GO.term_seu$ID[GO.term_seu$ID %in% go_id])
+  nr.total.seu = length(GO.term_seu$ID)
+  ratio.seu = nr.inGO.seu/nr.total.seu
+  
+  #Precision and Recall Seurat
+  TP.Seu = nr.inGO.seu
+  FP.Seu = nr.total.seu - TP.Seu
+  FN.Seu = length(go_id) - TP.Seu
+  
+  Prec.Seu  = TP.Seu / (TP.Seu+FP.Seu)
+  Rec.Seu = TP.Seu / (TP.Seu+FN.Seu)
+  
+  F1.Seu = 2*(Prec.Seu*Rec.Seu/(Prec.Seu+Rec.Seu))
+  
+  
+  #MAST ratio
+  GO.term_MAST <- read.xlsx(paste0(path_GO,"DOWN_genes_GO_",celltype,"_HFpEF_MAST_seurat.xlsx"), rowNames=T)
+  GO.term_MAST <- GO.term_MAST[GO.term_MAST$p.adjust <= 0.05,] #Only significant
+  
+  nr.inGO.MAST = length(GO.term_MAST$ID[GO.term_MAST$ID %in% go_id])
+  nr.total.MAST = length(GO.term_MAST$ID)
+  ratio.MAST = nr.inGO.MAST/nr.total.MAST
+  
+  #Precision and Recall MAST
+  TP.MAST = nr.inGO.MAST
+  FP.MAST = nr.total.MAST - TP.MAST
+  FN.MAST = length(go_id) - TP.MAST
+  
+  Prec.MAST  = TP.MAST / (TP.MAST+FP.MAST)
+  Rec.MAST = TP.MAST / (TP.MAST+FN.MAST)
+  
+  F1.MAST = 2*(Prec.MAST*Rec.MAST/(Prec.MAST+Rec.MAST))
+  
+  #XAI ratio
+  GO.term_xai <- read.xlsx(paste0(path_GO,"DOWN_genes_GO_",celltype,"_HFpEF_XAI_DXG.xlsx"), rowNames=T)
+  GO.term_xai <- GO.term_xai[GO.term_xai$p.adjust <= 0.05,] #Only significant
+  
+  nr.inGO.xai = length(GO.term_xai$ID[GO.term_xai$ID %in% go_id])
+  nr.total.xai = length(GO.term_xai$ID)
+  ratio.xai = nr.inGO.xai/nr.total.xai
+  
+  #Precision and Recall XAI
+  TP.XAI = nr.inGO.xai
+  FP.XAI = nr.total.xai - TP.XAI
+  FN.XAI = length(go_id) - TP.XAI
+  
+  Prec.XAI  = TP.XAI / (TP.XAI+FP.XAI)
+  Rec.XAI = TP.XAI / (TP.XAI+FN.XAI)
+  
+  F1.XAI = 2*(Prec.XAI*Rec.XAI/(Prec.XAI+Rec.XAI))
+  
+  #rbind results to the dataframe
+  df.result <- rbind(df.result, data.frame(Celltype = celltype,
+                                           Seurat_Prec = Prec.Seu,
+                                           Seurat_Rec = Rec.Seu,
+                                           Seurat_F1 = F1.Seu,
+                                           MAST_Prec = Prec.MAST,
+                                           MAST_Rec = Rec.MAST,
+                                           MAST_F1 = F1.MAST,
+                                           XAI_Prec = Prec.XAI,
+                                           XAI_Rec = Rec.XAI,
+                                           XAI_F1 = F1.XAI, 
+                                           stringsAsFactors = FALSE))
+  
+}
+
+#Select which things to show: F1 or Recall and Precision
+df.result %<>% dplyr::select(-Seurat_Prec,-Seurat_Rec, -XAI_Prec,-XAI_Rec, -MAST_Prec, -MAST_Rec)
+
+df.result.melt <- reshape2::melt(df.result)
+
+theme_box <- function(){
+  theme_bw() +
+    theme(
+      panel.border = element_rect(colour = "black", fill = NA, size = 1),
+      # panel.grid.major = element_blank(),
+      # panel.grid.minor = element_blank(),
+      panel.grid.major = element_line(colour = "grey90", linetype = "dotted"),
+      panel.grid.minor = element_line(colour = "grey90", linetype = "dotted"),
+      # strip.placement = "outside",
+      axis.ticks.x = element_blank(),
+      axis.line = element_line(colour = "black"),
+      #facet_grid colors
+      strip.background = element_rect(fill = "lightgrey", colour = "black", size = 1),
+      strip.text = element_text(colour = "black", size = 12)
+    )
+}
+
+df.result.melt$variable <- plyr::revalue(df.result.melt$variable,
+                                  c("Seurat_F1" = "Expr-Wilcoxon",
+                                    "MAST_F1" = "Expr-MAST",
+                                    "XAI_F1" = "Shap-t"))
+df.result.melt$Celltype <- plyr::revalue(df.result.melt$Celltype,
+                                  c("Immune.cells" = "Immune cells",
+                                    "Smooth.Muscle" = "Smooth muscle"))
+
+df.result.melt$variable <- factor(df.result.melt$variable, levels = c("Shap-t","Expr-MAST","Expr-Wilcoxon"))
+
+
+dot_colours <- c("maroon","#2F4F4F","#DAA520","#2F4F4F", "tomato", "#b35900", "#236e00", "#7ad500", "#881800", "#004655","#6fa9a9","#DAA520")
+
+# df.result_list.dis$Group <- ifelse(grepl("t-test", df.result_list.dis$Tool),"t-test", "Wilcoxon")
+# df.result_list.dis$Group <- factor(df.result_list.dis$Group, levels = c("Wilcoxon","t-test"))
+disease <- "HFpEF"
+
+
+
+ggplot(df.result.melt, aes(x=Celltype, y=value, shape=variable, color=variable))+
+  geom_point(aes(shape=variable, size=variable), position = position_dodge(width = 0.35))+
+  theme_box() +
+  facet_grid(~Celltype, scales = "free")+
+  scale_color_manual(name="Value type",
+                     values =  dot_colours)+
+  scale_shape_manual(name="Value type",
+                     values = c(17,16,18))+
+  scale_size_manual(name="Value type",
+                    values = c(4,4,4))+
+  labs(title = paste0("GO - Comparison of Human ", disease," vs healthy"), y = "F1 - Score", hjust=0.5) +
+  theme(axis.text.x = element_blank(),
+        # axis.text.x = element_text(color = "black", size = 14,angle = 45,hjust = 1, family = "Helvetica"),
+        axis.text.y = element_text(color = "black", size = 14, family = "Helvetica"),
+        axis.title.x = element_blank(),
+        axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+        plot.title = element_text(size = 14, hjust = 0, face ="bold", family = "Helvetica"),
+        axis.line = element_line(color = "black"),
+        strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+        legend.text = element_text(size = 10, color = "black", family = "Helvetica"),
+        legend.title = element_text(size = 10, color = "black", family = "Helvetica", face = "bold", hjust =0.5),
+        panel.spacing = unit(0, "lines"))
+  # + ggprism::annotation_ticks(sides = "lrbt", type = "major", outside = F)
+        
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/scatterplots/Figure4/Human_GSEA_F1_score_",disease,"_vs_healthy_with_MAST.pdf"), width = 12, height = 2.75)
+dev.off()
 
 
 

@@ -50,11 +50,11 @@ for (celltype in unique(Seu.Obj.Human$cell_type)) {
     Human_Markers <- FindMarkers(object = Human.HF.Seu.celltype,
                                 ident.1 = ident.1,
                                 ident.2 = ident.2,
-                                min.pct = 0.1,
-                                logfc.threshold = 0.1,
+                                min.pct = 0,
+                                logfc.threshold = 0,
                                 assay = "RNA",
                                 only.pos = F,
-                                test.use = "wilcox_limma")
+                                test.use = "t")
     
     Human_Markers <- rownames_to_column(Human_Markers)
     Human_Markers[["disease"]] <- ident.1
@@ -63,9 +63,17 @@ for (celltype in unique(Seu.Obj.Human$cell_type)) {
     }
   }
 }
+
+#without filtering p's
+names(Human_markers_final)[names(Human_markers_final) == "rowname"] <- "gene"
+write.xlsx(Human_markers_final,file=paste0(outputFolder,"/DGE_Human_HF_min_pct_0_logfc_0_for_GSEA.xlsx"), colNames = T, rowNames = F)
+
+#with filtering p's
 Human_markers_final <- Human_markers_final[Human_markers_final$p_val_adj<=0.05,]
 names(Human_markers_final)[names(Human_markers_final) == "rowname"] <- "gene"
 write.xlsx(Human_markers_final,file=paste0(outputFolder,"/DGE_Human_HF_min_pct_0.1_logfc_0.1.xlsx"), colNames = T, rowNames = F)
+
+
 ```
 
 ##2.1 DGE analysis using every method in seurat HUMAN

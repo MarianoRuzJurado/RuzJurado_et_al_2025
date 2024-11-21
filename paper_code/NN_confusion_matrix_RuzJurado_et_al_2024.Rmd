@@ -12,7 +12,6 @@ editor_options:
 #load libraries
 library(Seurat)
 library(tidyverse)
-library(svglite)
 library(ggplot2)
 library(ggpubr)
 library(openxlsx)
@@ -129,7 +128,7 @@ new_data <- apply(test_labels.disease, 1, function(row) {
 })
 new_data <- plyr::mapvalues(new_data, 
                       from = c(1,2,3,4),
-                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+                      to = c("AS", "HFpEF", "HFrEF", "Healthy"))
 
 actual.df <- data.frame(disease_encoded = new_data)
 
@@ -141,7 +140,7 @@ new_data <- apply(predicted_labels.disease, 1, function(row) {
 
 new_data <- plyr::mapvalues(new_data, 
                       from = c(1,2,3,4),
-                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+                      to = c("AS", "HFpEF", "HFrEF", "Healthy"))
 
 pred.df <- data.frame(disease_encoded = new_data)
 
@@ -1224,7 +1223,7 @@ new_data <- apply(test_labels.disease.h, 1, function(row) {
 
 map_data <- plyr::mapvalues(new_data, 
                       from = c(1,2,3,4),
-                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+                      to = c("AS", "HFpEF", "HFrEF", "Healthy"))
 
 actual.df <- data.frame(disease_encoded = map_data)
 
@@ -1236,7 +1235,7 @@ new_data <- apply(predicted_labels.disease.h, 1, function(row) {
 
 map_data <- plyr::mapvalues(new_data, 
                       from = c(1,2,3,4),
-                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+                      to = c("AS", "HFpEF", "HFrEF", "Healthy"))
 
 pred.df <- data.frame(disease_encoded = map_data)
 
@@ -1265,5 +1264,82 @@ p1 <- plot_confusion_matrix(conf_mat$`Confusion Matrix`[[1]],
 p1
 
 ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/confusion_matrix_plots/confusion_matrix_disease_h.pdf", plot=p1, width = 10, height = 10)
+dev.off()
+``` 
+
+##Additional: Confusion matrix plot for disease mouse results
+```{r}
+#Now for Disease
+test_labels.disease <- test_labels[,colnames(test_labels) %in% c('AS', 'HFpEF', 'HFrEF', 'CTRL')]
+predicted_labels.disease <- predicted_labels[,colnames(predicted_labels) %in% c('AS', 'HFpEF', 'HFrEF', 'CTRL')]
+
+# Create a vector of cell types
+species <- colnames(test_labels.species) #"1 Human # 2 Mice
+
+new_data <- apply(test_labels.species, 1, function(row) {
+  species_index <- which.max(row)
+  return(species_index)
+})
+
+actual.df <- data.frame(disease_encoded = new_data)
+
+#for actual
+row_indices_mouse <- which(actual.df$disease_encoded == 2) 
+test_labels.disease.m <- test_labels.disease[row_indices_mouse,]
+#for pred
+predicted_labels.disease.m <- predicted_labels.disease[row_indices_mouse,]
+
+# Create a vector of cell types
+diseases <- colnames(test_labels.disease.m) #"1 AS" "2 HFpEF"    "3 HFrEF"    "4 CTRL
+
+# Create DataFrame with column containing cell type numbers
+new_data <- apply(test_labels.disease.m, 1, function(row) {
+  disease_index <- which.max(row)
+  return(disease_index)
+})
+
+map_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("AS", "HFpEF", "HFrEF", "Healthy"))
+
+actual.df <- data.frame(disease_encoded = map_data)
+
+# Create DataFrame with column containing cell type numbers
+new_data <- apply(predicted_labels.disease.m, 1, function(row) {
+  disease_index <- which.max(row)
+  return(disease_index)
+})
+
+map_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("AS", "HFpEF", "HFrEF", "Healthy"))
+
+pred.df <- data.frame(disease_encoded = map_data)
+
+
+# make tibble for confusion matrix
+df_tibble <- tibble("target" = actual.df$disease_encoded,
+                    "prediction" = pred.df$disease_encoded) 
+
+
+
+conf_mat <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+
+p1 <- plot_confusion_matrix(conf_mat$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.3)
+p1
+
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/confusion_matrix_plots/confusion_matrix_disease_m.pdf", plot=p1, width = 10, height = 10)
 dev.off()
 ``` 
