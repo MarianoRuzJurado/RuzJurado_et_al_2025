@@ -244,81 +244,6 @@ plt.savefig("/media/Helios_scStorage/Mariano/NN_Human_Mice/hypertuning/plot/AE_3
 plt.close()
 
 
-# 2D Scatter
-# Define custom colormap
-colors = [(128/255, 0, 0), (47/255, 79/255, 79/255)]  # Maroon, white, dark slate gray
-custom_cmap = LinearSegmentedColormap.from_list("CustomCmap", colors)
-
-fig = plt.figure()
-
-ax = fig.add_subplot()
-ax.grid(False)
-
-# Normalize loss values to range [0, 1] for colormap
-norm = plt.Normalize(min(loss_values_comb), max(loss_values_comb))
-
-# Scatter plot
-scatter = ax.scatter(loss_values_comb,
-           averages_comb_dec,
-           c=loss_values_comb,
-           cmap=custom_cmap,
-           norm=norm)
-# Set the number of ticks on the y-axis to 5
-ax.yaxis.set_major_locator(MaxNLocator(nbins=6))
-ax.xaxis.set_major_locator(MaxNLocator(nbins=5))
-
-# Add color bar
-cbar = fig.colorbar(scatter, ax=ax, pad=0.1)
-cbar.set_label('Loss')
-
-# Find index of minimum loss value
-min_loss_index = np.argmin(loss_values_comb)
-
-# Plot point with minimum loss value differently
-ax.scatter(loss_values_comb[min_loss_index],
-                     averages_comb_dec[min_loss_index],
-                     c='green',
-                     label='Min Loss')
-
-# Inset zoomed-in plot
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-
-# Create inset of the zoomed region
-axins = inset_axes(ax, width="40%", height="100%", loc='upper right',
-                   bbox_to_anchor=(0.1, 0.1, 1, 1),
-                   bbox_transform=ax.transAxes)
-
-# Scatter plot for the inset
-scatter_ins = axins.scatter(loss_values_comb,
-                            averages_comb_enc,
-                            averages_comb_dec,
-                            c=loss_values_comb,
-                            cmap=custom_cmap,
-                            norm=norm)
-
-
-axins.set_xlim(min(loss_values_comb), 0.15)
-ax.yaxis.set_major_locator(MaxNLocator(nbins=6))
-
-
-'''# Add grid lines for the point with the minimum loss value
-ax.plot([min_loss_value, min_loss_value], [min_enc_value, min_enc_value], [min(averages_comb_dec), min_dec_value], color='black', linestyle='--', linewidth=2)
-ax.plot([min_loss_value, min_loss_value], [min(averages_comb_enc), min_enc_value], [min_dec_value, min_dec_value], color='black', linestyle='--', linewidth=2)
-ax.plot([min(loss_values_comb), max(loss_values_comb)], [min_enc_value, min_enc_value], [min_dec_value, min_dec_value], color='black', linestyle='--', linewidth=2)
-'''
-
-# Labeling axes
-ax.set_ylabel('Average Neurons (Encoder)')
-ax.set_zlabel('Average Neurons (Decoder)')
-ax.set_xlabel('L2-Loss')
-
-# Title
-ax.set_title('Scatter Plot of Loss vs Average Neuron Values')
-plt.show()
-plt.savefig("/media/Helios_scStorage/Mariano/NN_Human_Mice/hypertuning/plot/AE_2D_hypertuning_plot_test.pdf")
-plt.close()
-
-
 #MLP_hypertuning_analysis
 
 # Path to log files
@@ -502,19 +427,6 @@ ax.scatter(loss_values_comb[min_loss_index],
                      s=100,
                      label='Min Loss')
 ax.invert_xaxis()
-
-
-
-# Plot point with grid?
-#min_loss_value = loss_values_comb[min_loss_index]
-#min_enc_value = averages_comb_enc[min_loss_index]
-#min_dec_value = averages_comb_dec[min_loss_index]
-
-'''# Add grid lines for the point with the minimum loss value
-ax.plot([min_loss_value, min_loss_value], [min_enc_value, min_enc_value], [min(averages_comb_dec), min_dec_value], color='black', linestyle='--', linewidth=2)
-ax.plot([min_loss_value, min_loss_value], [min(averages_comb_enc), min_enc_value], [min_dec_value, min_dec_value], color='black', linestyle='--', linewidth=2)
-ax.plot([min(loss_values_comb), max(loss_values_comb)], [min_enc_value, min_enc_value], [min_dec_value, min_dec_value], color='black', linestyle='--', linewidth=2)
-'''
 
 # Labeling axes
 ax.set_ylabel('Average Neurons')
