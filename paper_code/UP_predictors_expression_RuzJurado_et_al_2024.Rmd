@@ -1,7 +1,7 @@
 ---
-title: 'NN Paper Final Script: Predictors expression values'
+title: 'Script: Predictor analysis'
 author: "Mariano Ruz Jurado"
-date: "2024-07-01"
+date: "2024-12-11"
 output: html_document
 editor_options: 
   chunk_output_type: console
