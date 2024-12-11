@@ -14,15 +14,6 @@ adata_obj_H = sc.read_h5ad(
 adata_obj_M = sc.read_h5ad(
     "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/objects/adata.Obj.annotated.M.h5ad")
 
-'''
-Human_tp5_markers = pd.read_excel(
-    "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/markers_celtype/Human_tp5_markers_cell_annotation.xlsx",
-    index_col=0)
-Mouse_tp5_markers = pd.read_excel(
-    "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/markers_celtype/Mouse_tp5_markers_cell_annotation.xlsx",
-    index_col=0)
-'''
-
 dict_cell_Markers_h = {'CM': ['RYR2', 'MLIP', 'TTN', 'FGF12', 'FHL2'],
                      'EC': ['VWF', 'ANO2', 'PTPRB', 'LDB2', 'FLT1'],
                      'FB': ['ABCA6', 'PDGFRA', 'DCN', 'MGP', 'ABCA9'],
@@ -77,7 +68,7 @@ print("Dotplot axes:", dp)
 # Select the Axes object that contains the subplot of interest
 ax = dp["mainplot_ax"]
 
-# Remove the x-axis labels (groupby categories) from the bottom
+# Remove the x-axis labels from the bottom
 lab = ax.get_yticklabels()
 # ax.set_yticks([])
 
@@ -119,14 +110,14 @@ dp = sc.pl.dotplot(adata_obj_M,
 
 # All Axes used in dotplot
 print("Dotplot axes:", dp)
-# Select the Axes object that contains the subplot of interest
+#Select the Axes object that contains the subplot of interest
 ax = dp["mainplot_ax"]
 
-# Remove the x-axis labels (groupby categories) from the bottom
+#Remove the x-axis labels from the bottom
 lab = ax.get_xticklabels()
 # ax.set_xticks([])
 
-# Loop through ticklabels and make them italic
+#ticklabels, make them italic
 for l in ax.get_yticklabels():
     l.set_style("italic")
     l.set_weight("bold")
@@ -158,7 +149,7 @@ ax = dp["mainplot_ax"]
 lab = ax.get_xticklabels()
 # ax.set_xticks([])
 
-# Loop through ticklabels and make them italic
+#italic
 for l in ax.get_xticklabels():
     l.set_style("italic")
     l.set_weight("bold")
@@ -174,12 +165,3 @@ for txt in dp['gene_group_ax'].texts:
 
 plt.savefig(f'{outDir}/Dotplot_Mouse_tp5_markers_rotated.pdf', dpi = 300)
 
-
-
-
-# Set the x-axis label to display groupby categories at the top
-# cat = adata_obj_H.obs["cell_type"].unique()
-# cat = ', '.join(cat)
-# ax.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
-# ax.xaxis.set_label_position('top')  # Set the label position to top
-# ax.set_xlabel(lab, fontsize=12, rotation=90)
