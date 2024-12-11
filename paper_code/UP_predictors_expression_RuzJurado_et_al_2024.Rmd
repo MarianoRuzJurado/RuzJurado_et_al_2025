@@ -1,0 +1,1105 @@
+---
+title: 'NN Paper Final Script: Predictors expression values'
+author: "Mariano Ruz Jurado"
+date: "2024-07-01"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+#0. Load essential libraries
+```{r}
+#load libraries
+library(Seurat)
+library(tidyverse)
+library(ggpubr)
+library(ggplot2)
+library(openxlsx)
+source("/media/EOS_ZMM_shared/Bioinformatic/scRNA-SEQ-ZMM/Import10X-HelperFunctions_SeuratV3.R")
+source("/media/EOS_ZMM_shared/Bioinformatic/scRNA-SEQ-ZMM/Mariano_functions.R")
+outputFolder <- "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code"
+sink(file = paste0(outputFolder,"/NN_Paper_Script.log"), append = TRUE, split = TRUE)
+```
+
+#1. Load Seurat object containing HF expression data
+```{r}
+# load object
+Seu.Obj.annotated <- readRDS(file = "/media/Helios_scStorage/Mariano/Human_Mice_Comparison/Human_Mice_Integrated/Seurat_and_R_objects/SeuratObject.combined.integrated.annotated_10_08_22.rds")
+DefaultAssay(object = Seu.Obj.annotated) <- "RNA"
+
+```
+
+#2. Bar plots for top predictors in species
+##2.1 Human class For Figure 3b
+
+```{r}
+genes_of_interest  <- c("AIRN","FGF12","CMSS1","LIMS3","CAMK1D","LUC7L2","APOE","GPC6","MYH7","MYH6")
+
+for (gene in genes_of_interest) {
+  DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated,
+                            Feature = gene,
+                            group.by = "species",
+                            ctrl.condition = "Human",
+                            SeuV5 = F,
+                            stat_pos_mod = 1.08,
+                            wilcox_test = T,
+                            #bar_colours = c("#1f77b4","#ea7e1eff"),
+                            x_label_rotation = 0
+                            ,y_limits = c(0,2)
+                            )
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/Figure3/",gene,"_Human_barplot.pdf"),
+       height = 3.5, width = 3)
+}
+
+Seu.Obj.annotated$Human_other <- plyr::revalue(Seu.Obj.annotated$species,
+                                             c(`Mice` = "Other"))
+Seu.Obj.annotated$cell_type_shortened <- plyr::revalue(Seu.Obj.annotated$cell_type,
+                                                       c("Cardiomyocytes" = "CM",
+                                                         "Fibroblasts" = "FB",
+                                                         "Endothelial" = "EC",
+                                                         "Pericytes" = "PC",
+                                                         "Immune.cells" = "IC",
+                                                         "Smooth.Muscle" = "SMC",
+                                                         "Neuro" = "NC"))
+#Sum up diseases in one category
+Seu.Obj.annotated$disease_sum <- plyr::revalue(Seu.Obj.annotated$disease,
+                                                       c("CTRL" = "Comb",
+                                                         "CTRL.LV" = "Comb",
+                                                         "CTRL.SP" = "Comb",
+                                                         "HFpEF" = "Comb",
+                                                         "HFrEF" = "Comb",
+                                                         "Hypertrophy" = "Comb"))
+
+DO.MultipleFeature.Dotplot(SeuratObject = Seu.Obj.annotated,
+                           Feature = genes_of_interest,
+                           group.by.x = "cell_type_shortened",
+                           group.by.y1 = "Human_other",
+                           group.by.y2 = "disease_sum",
+                           colZ = F,
+                           dot.size = c(3,6),
+                           plot.margin = c(1,1,1,1),
+                           wilcox_test=T,
+                           gene_order = genes_of_interest)
+
+
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/Dotplots/MultipleFeature_plot/Human_top10_predictor_MultipleFeaturePlot_DisComb_figure3d.pdf", width = 10.5, height = 5)
+```
+
+
+#3. Bar plots for top predictors in CM
+##3.1 CM class For Figure 3b
+
+```{r}
+genes_of_interest  <- c("FGF12","PCDH7","MLIP", "TNNI3K","CTNNA3", "LDB3","ACTN2","RBFOX1","OBSCN", "ADGRB3")
+
+#reannotate cell types to make comparison
+Seu.Obj.annotated$CM_other <- plyr::revalue(Seu.Obj.annotated$cell_type,
+                                             c(`Fibroblasts` = "Other",
+                                               `Endothelial` = "Other",
+                                               `Pericytes` = "Other",
+                                               `Immune.cells` = "Other",
+                                               `Smooth.Muscle` = "Other",
+                                               `Neuro` = "Other",
+                                               `Cardiomyocytes` = "CM"))
+
+for (gene in genes_of_interest) {
+  DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated.M,
+                            Feature = gene,
+                            group.by = "CM_other",
+                            ctrl.condition = "CM",
+                            SeuV5 = F,
+                            stat_pos_mod = 1.08,
+                            wilcox_test = T,
+                            #bar_colours = c("#1f77b4","#ea7e1eff"),
+                            x_label_rotation = 0
+                            #,y_limits = c(0,2.5)
+                            )
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/Figure3/CM_class/",gene,"_CM_barplot.pdf"),
+       height = 3.5, width = 3)
+}
+
+DO.MultipleFeature.Dotplot(SeuratObject = Seu.Obj.annotated,
+                           Feature = genes_of_interest,
+                           group.by.x = "disease",
+                           group.by.y1 = "CM_other",
+                           group.by.y2 = "species",
+                           colZ = F,
+                           dot.size = c(3,6),
+                           plot.margin = c(1,1,1,1),
+                           wilcox_test=T,
+                           gene_order = genes_of_interest)
+
+
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/Dotplots/MultipleFeature_plot/CM_top10_predictor_MultipleFeaturePlot_figure3d.pdf", width = 10, height = 4)
+
+```
+
+
+#4. Bar plots + Multi dotplot for top predictors in HFpEF
+
+```{r}
+#reannotate cell types to make comparison
+Seu.Obj.annotated$disease <- plyr::revalue(Seu.Obj.annotated$disease,c(`CTRL.LV` = "CTRL",
+                                   `CTRL.SP` = "CTRL"))
+
+Seu.Obj.annotated$HFpEF_other <- plyr::revalue(Seu.Obj.annotated$disease,
+                                             c(`HFrEF` = "Other",
+                                               `CTRL` = "Other",
+                                               `Hypertrophy` = "Other"))
+Seu.Obj.annotated$cell_type_shortened <- plyr::revalue(Seu.Obj.annotated$cell_type,
+                                                       c("Cardiomyocytes" = "CM",
+                                                         "Fibroblasts" = "FB",
+                                                         "Endothelial" = "EC",
+                                                         "Pericytes" = "PC",
+                                                         "Immune.cells" = "IC",
+                                                         "Smooth.Muscle" = "SMC",
+                                                         "Neuro" = "NC"))
+
+
+genes_of_interest <-c("VTI1A","ABCC1","LRRK2","CLIP2","BTG2","PCNT","SUFU","LIN54","IQSEC1","SMARCC2")
+tmp <- list()
+for (gene in genes_of_interest) {
+  tmp[[gene]] <- DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated,
+                            Feature = gene,
+                            group.by = "HFpEF_other",
+                            ctrl.condition = "HFpEF",
+                            SeuV5 = F,
+                            stat_pos_mod = 1.03,
+                            wilcox_test = T,
+                            #bar_colours = c("#1f77b4","#ea7e1eff"),
+                            x_label_rotation = 0
+                            #,y_limits = c(0,2.5),
+                            ,returnValues = T
+                            )
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/Figure3/HFpEF_class/",gene,"HFpEF_barplot.pdf"), height = 3.5, width = 3)
+}
+
+df_HFpEF<- DO.MultipleFeature.Dotplot(SeuratObject = Seu.Obj.annotated,
+                           Feature = genes_of_interest,
+                           group.by.x = "cell_type_shortened",
+                           group.by.y1 = "HFpEF_other",
+                           group.by.y2 = "species",
+                           colZ = F,
+                           dot.size = c(3,6),
+                           plot.margin = c(1,1,1,1),
+                           wilcox_test=F,
+                           gene_order = genes_of_interest)
+
+
+
+write.xlsx(df_HFpEF, "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/Dotplots/MultipleFeature_plot/HFpEF_top10_predictor_MultipleFeaturePlot_figure_6bext.xlsx")
+
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/Dotplots/MultipleFeature_plot/HFpEF_top10_predictor_MultipleFeaturePlot_figure3d.pdf", width = 8, height = 3.5)
+
+
+
+```
+
+#5. Bar plots + Multi dotplot for top predictors in HFrEF
+
+```{r}
+#reannotate cell types to make comparison
+Seu.Obj.annotated$disease <- plyr::revalue(Seu.Obj.annotated$disease,c(`CTRL.LV` = "CTRL",
+                                   `CTRL.SP` = "CTRL"))
+
+Seu.Obj.annotated$HFrEF_other <- plyr::revalue(Seu.Obj.annotated$disease,
+                                             c(`HFpEF` = "Other",
+                                               `CTRL` = "Other",
+                                               `Hypertrophy` = "Other"))
+
+genes_of_interest <- c("VTI1A","ABCC1","LRRK2","CLIP2","BTG2","PCNT","SUFU","LIN54","IQSEC1","SMARCC2","RTTN")
+for (gene in genes_of_interest) {
+  DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated,
+                            Feature = gene,
+                            group.by = "HFrEF_other",
+                            ctrl.condition = "HFrEF",
+                            SeuV5 = F,
+                            stat_pos_mod = 1.03,
+                            wilcox_test = T,
+                            #bar_colours = c("#1f77b4","#ea7e1eff"),
+                            x_label_rotation = 0
+                            #,y_limits = c(0,2.5)
+                            )
+  
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/Figure3/HFrEF_class/",gene,"Mice_HFrEF_barplot.pdf"),
+       height = 3.5, width = 3)
+}
+
+
+#### USE the MULTI variable Dotplot function, works with a column with the class of interesst and the rest set to "Others"
+#reannotate cell types to make comparison
+Seu.Obj.annotated$disease <- plyr::revalue(Seu.Obj.annotated$disease,c(`CTRL.LV` = "CTRL",
+                                   `CTRL.SP` = "CTRL"))
+
+Seu.Obj.annotated$HFrEF_other <- plyr::revalue(Seu.Obj.annotated$disease,
+                                             c(`HFpEF` = "Other",
+                                               `CTRL` = "Other",
+                                               `Hypertrophy` = "Other"))
+
+Seu.Obj.annotated$cell_type_shortened <- plyr::revalue(Seu.Obj.annotated$cell_type,
+                                                       c("Cardiomyocytes" = "CM",
+                                                         "Fibroblasts" = "FB",
+                                                         "Endothelial" = "EC",
+                                                         "Pericytes" = "PC",
+                                                         "Immune.cells" = "IC",
+                                                         "Smooth.Muscle" = "SMC",
+                                                         "Neuro" = "NC"))
+
+#define the genes found in the beeswarm
+genes_of_interest <-c("FGF12","PCDH7","EMCN","XRRA1","FKBP5","CYYR1","PIK3R3","CCNL2","ANKRD36","EPAS1")
+#some genes are not expressed at all in neurons that leads the test to fail:
+#sum function for it, to see it
+# melt_geneExp %>%
+#      group_by(variable, xaxis, id) %>%
+#      summarise(
+#          min_value = min(value, na.rm = TRUE),
+#          max_value = max(value, na.rm = TRUE),
+#          unique_values = n_distinct(value)
+#      )
+
+df_HFrEF<- DO.MultipleFeature.Dotplot(SeuratObject = Seu.Obj.annotated,
+                           Feature = genes_of_interest,
+                           group.by.x = "cell_type_shortened",
+                           group.by.y1 = "HFrEF_other",
+                           group.by.y2 = "species",
+                           colZ = F,
+                           dot.size = c(3,6),
+                           plot.margin = c(1,1,1,1),
+                           wilcox_test = F,
+                           gene_order = genes_of_interest)
+
+write.xlsx(df_HFrEF, "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/Dotplots/MultipleFeature_plot/HFrEF_top10_predictor_MultipleFeaturePlot_figure_6bext.xlsx")
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/Dotplots/MultipleFeature_plot/HFrEF_top10_predictor_MultipleFeaturePlot_figure_6eext.pdf", width = 8, height = 3.5)
+
+
+gene <- "CCNL2" #EPAS1, CCNL2
+DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated,
+                          Feature = gene,
+                          group.by = "HFrEF_other",
+                          ctrl.condition = "HFrEF",
+                          SeuV5 = F,
+                          stat_pos_mod = 1.03,
+                          wilcox_test = T,
+                          x_label_rotation = 0
+                          )
+
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/",gene,"_HFrEF_barplot.pdf"),
+       height = 3.5, width = 3)
+
+```
+
+#6. Bar plots + Multi dotplot for top predictors in AS
+
+```{r}
+#### USE the MULTI variable Dotplot function, works with a column with the class of interesst and the rest set to "Others"
+#reannotate cell types to make comparison
+
+
+Seu.Obj.annotated$disease <- plyr::revalue(Seu.Obj.annotated$disease,c(`CTRL.LV` = "CTRL",
+                                   `CTRL.SP` = "CTRL"))
+
+Seu.Obj.annotated$AS_other <- plyr::revalue(Seu.Obj.annotated$disease,
+                                             c(`HFpEF` = "Other",
+                                               `CTRL` = "Other",
+                                               `HFrEF` = "Other"))
+
+Seu.Obj.annotated$AS_other <- plyr::revalue(Seu.Obj.annotated$AS_other,
+                                             c(`Hypertrophy` = "AS"))
+
+Seu.Obj.annotated$cell_type_shortened <- plyr::revalue(Seu.Obj.annotated$cell_type,
+                                                       c("Cardiomyocytes" = "CM",
+                                                         "Fibroblasts" = "FB",
+                                                         "Endothelial" = "EC",
+                                                         "Pericytes" = "PC",
+                                                         "Immune.cells" = "IC",
+                                                         "Smooth.Muscle" = "SMC",
+                                                         "Neuro" = "NC"))
+
+#define the genes found in the beeswarm
+genes_of_interest <-c("FKBP5","MYBPC3","CAMK1D","SGIP1","TTN","TNNT1","SOX6","ACTC1","MYH7B","NAV1")
+
+df_AS <- DO.MultipleFeature.Dotplot(SeuratObject = Seu.Obj.annotated,
+                           Feature = genes_of_interest,
+                           group.by.x = "cell_type_shortened",
+                           group.by.y1 = "AS_other",
+                           group.by.y2 = "species",
+                           colZ = F,
+                           dot.size = c(3,6),
+                           plot.margin = c(1,1,1,1),
+                           wilcox_test = F,
+                           gene_order = genes_of_interest)
+
+write.xlsx(df_AS, "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/Dotplots/MultipleFeature_plot/AS_top10_predictor_MultipleFeaturePlot_figure_6bext.xlsx")
+ggsave("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/Dotplots/MultipleFeature_plot/AS_top10_predictor_MultipleFeaturePlot_figure_6bext.pdf", width = 8, height = 3.5)
+
+
+gene <- "MYBPC3" # SOX6, MYBPC3
+DO.Mean.SEM.Graphs.wilcox(SeuratObject = Seu.Obj.annotated,
+                          Feature = gene,
+                          group.by = "AS_other",
+                          ctrl.condition = "AS",
+                          SeuV5 = F,
+                          stat_pos_mod = 1.03,
+                          wilcox_test = T,
+                          x_label_rotation = 0
+                          )
+
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_SHAP/",gene,"_AS_barplot.pdf"),
+       height = 3.5, width = 3)
+
+```
+
+#7. GSEA with Seurat wilcox and t-test vs XAI wilcox and t-test
+
+##7.1 Seurat GSEA wilcox and t-test
+```{r}
+#with unfiltered DEGs
+
+#initalize cell type and disease, set testmethod for loading correct sheets
+test.Seurat <- c("wilcox_Test","t")
+disease <- "HFpEF"
+cell_names <- c("Cardiomyocytes","Endothelial","Fibroblasts","Immune.cells","Neuro","Pericytes","Smooth.Muscle")
+metric <- "fc_p" # folchange+pvalue= fc_p, only foldchange = fc
+
+# Function to shorten each word to max 7 characters and remove filler words
+# Define a vector of filler words you want to remove
+filler_words <- c("of", "in", "the", "on", "for", "and", "to")
+shorten_term <- function(term) {
+  words <- strsplit(term, " ")[[1]]  # Split the term into individual words
+  shortened_words <- sapply(words, function(word) {
+    if (word %in% filler_words) {
+      return("")  # Replace filler words with an empty string
+    } else if (nchar(word) > 7) {
+      paste0(substr(word, 1, 7), ".")  # Truncate to 7 characters and add a .
+    } else {
+      word  # Keep the word as is if it's less than or equal to 7 characters
+    }
+  })
+  paste(shortened_words[shortened_words != ""], collapse = " ")  # Join the non-empty words
+}
+    
+for (method in test.Seurat) {
+  print(method)
+  for (cell_type in cell_names) {
+    
+    seurat_DGE <- openxlsx::read.xlsx(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_Seurat_",method,"_Human_HF_min_pct_0_logfc_0_for_GSEA.xlsx"))
+    
+    if (method == "wilcox_Test") {
+      method.test <- "wilcox"      
+    }
+    
+    if(method == "MAST"){
+      method.test <- "MAST"
+    }
+    
+    if(method == "t"){
+      method.test <- "t"
+    }
+    
+    seurat_DGE_sub <- seurat_DGE[seurat_DGE$disease == disease & seurat_DGE$celltype == cell_type, ]
+    
+    #some adjustments for follow up functions
+    if (is.null(seurat_DGE_sub$rowname) & !is.null(seurat_DGE_sub$gene)) {
+      seurat_DGE_sub$rowname <- seurat_DGE_sub$gene
+    }
+    
+    OrgDb = org.Hs.eg.db
+    # define universe with ENTREZIDs as data frames
+    egallgenes <- as.vector(rownames(Seu.Obj.annotated)) 
+    egallgenes = clusterProfiler::bitr(egallgenes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+    
+    #just with logfc
+    if (metric == "fc") {
+      egallgenes$stat <- seurat_DGE_sub[["avg_log2FC"]][match(egallgenes$SYMBOL,seurat_DGE_sub$rowname)]
+      mygeneList <- egallgenes$stat
+      names(mygeneList) <- egallgenes$ENTREZID
+      mygeneList <- mygeneList[!is.na(mygeneList)]
+      mygeneList <- sort(mygeneList,decreasing = T)
+    }
+    
+    if (metric == "fc_p") {
+      
+      ###with p-values used
+      #Merge log fold change (avg_log2FC) and p-values into the gene list
+      egallgenes <- egallgenes %>%
+        left_join(seurat_DGE_sub %>% dplyr::select(rowname, avg_log2FC, p_val_adj), by = c("SYMBOL" = "rowname"))
+  
+      egallgenes$p_val_adj <- ifelse(egallgenes$p_val_adj == 0, (.Machine$double.xmin*10), egallgenes$p_val_adj)
+      
+     # #with binning
+      egallgenes <- egallgenes %>%
+        mutate(
+          p_bin = case_when(
+            p_val_adj < 0.05 ~ 0.1,
+            TRUE ~ 1
+          ),
+          stat = sign(avg_log2FC) * log10(abs(avg_log2FC / p_bin)+1)
+        )
+      
+      #sign check, continue if TRUE
+      table(sign(egallgenes$avg_log2FC) == sign(egallgenes$stat))
+      
+      #maximum finite positive and minimum finite negative values
+      max_finite <- max(egallgenes$stat[is.finite(egallgenes$stat)], na.rm = TRUE)
+      min_finite <- min(egallgenes$stat[is.finite(egallgenes$stat)], na.rm = TRUE)
+      
+      #Inf and -Inf replace with finite maximum or minimum
+      egallgenes <- egallgenes %>%
+        mutate(stat = ifelse(is.infinite(stat) & stat > 0, max_finite, stat),
+               stat = ifelse(is.infinite(stat) & stat < 0, min_finite, stat))
+
+      #remove duplicates
+      egallgenes <- egallgenes[!(duplicated(egallgenes$SYMBOL)),]
+  
+      #filter out 0s and NAs
+      egallgenes <- egallgenes[egallgenes$stat != 0,]
+      egallgenes <- egallgenes[complete.cases(egallgenes),]
+      
+      mygeneList <- egallgenes$stat
+      names(mygeneList) <- egallgenes$ENTREZID
+      mygeneList <- sort(mygeneList,decreasing = T)
+    }
+    #RUN GSEA
+    GO.GSEA <- clusterProfiler::gseGO(geneList = mygeneList,
+                     ont = "BP",
+                     OrgDb = OrgDb,
+                     keyType = "ENTREZID",
+                     minGSSize = 10,
+                     maxGSSize = 500,
+                     pvalueCutoff = 1,
+                     pAdjustMethod = "BH",
+                     verbose = FALSE,
+                     eps = 0,
+                     by= "fgsea",
+                     seed = 1234)
+    
+    GO.GSEA_save <- clusterProfiler::setReadable(GO.GSEA, OrgDb = OrgDb, keyType = "ENTREZID")
+    #save GO result as sheet
+    write.xlsx(GO.GSEA_save@result,paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/GSEA_",cell_type,"_",disease,"_",method.test,"_seurat_",metric,".xlsx"), rowNames=T)
+    
+    #save GO object
+    saveRDS(GO.GSEA,paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/GSEA_",cell_type,"_",disease,"_",method.test,"_seurat_",metric,".rds"))
+    
+  }
+}
+
+#plotting
+for (method in test.Seurat) {
+  print(method)
+  for (cell_type in cell_names) {
+    print(cell_type)
+    if (method == "wilcox_Test") {
+      method.test <- "wilcox"      
+    }
+    
+    if(method == "MAST"){
+      method.test <- "MAST"
+    }
+    
+    if(method == "t"){
+      method.test <- "t"
+    }
+    
+    GO.GSEA <- readRDS(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/",disease,"/GSEA_rds/GSEA_",cell_type,"_",disease,"_",method.test,"_seurat_",metric,".rds"))
+    
+    #grouping with clusterProfiler and filtering
+    GO.GSEA@result <- GO.GSEA@result[abs(GO.GSEA@result$NES) >=1.5,] #otherwise calculations takes forever
+    GO.GSEA <- clusterProfiler::simplify(GO.GSEA)
+    
+    showCategory_n <- 10 # number of terms
+    # GO.GSEA@result$Description <- sapply(GO.GSEA@result$Description, shorten_term)
+    
+    GO.GSEA@result$Description <- OrthoIntegrate::firstup(GO.GSEA@result$Description)
+    
+    rdgplot <- ridgeplot.gseaResult(GO.GSEA,showCategory = showCategory_n, label_format = 30, core_enrichment = T)+
+      labs(x="Enrichment distribution")
+    rdgplot +
+      theme(axis.text.x = element_text(color = "black",angle = 0, hjust = 0.5, size = 12, family = "Helvetica"),
+            axis.text.y = element_text(color = "black",face = "bold", size = 10, family = "Helvetica"),
+            axis.title.x = element_text(color = "black",face = "bold", size = 14, family = "Helvetica"),
+            axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+            plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
+            plot.subtitle = element_text(size = 14, hjust = 0, family = "Helvetica"),
+            axis.line = element_line(color = "black"),
+            strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+            legend.text = element_text(size = 8, color = "black", family = "Helvetica"),
+            legend.title = element_text(size = 12, color = "black", family = "Helvetica", face = "bold", hjust =0.5))
+    
+    ggsave(filename = paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/GSEA_analysis_XAI_seurat/seurat_",method.test,"/ridgeplot_",showCategory_n,"_",disease,"_",cell_type,"_",method.test,"_",metric,"_seurat.pdf"), width = 5, height = 7)
+    
+    ggsave(filename = paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/GSEA_analysis_XAI_seurat/seurat_",method.test,"/ridgeplot_",showCategory_n,"_",disease,"_",cell_type,"_",method.test,"_",metric,"_seurat_small.pdf"), width = 5, height = 5.5)
+  }
+}
+
+```
+
+##7.2 XAI GSEA wilcox and t-test
+
+```{r}
+# metric <- "fc" # folchange+pvalue= fc_p, only foldchange = fc
+test.xai <- c("wilcoxon","t")
+disease <- "HFpEF"
+cell_names <- c("Cardiomyocytes","Endothelial","Fibroblasts","Immune.cells","Neuro","Pericytes","Smooth.Muscle")
+metric <- "fc_p" # folchange+pvalue= fc_p, only foldchange = fc
+
+#DXG
+for (method in test.xai) {
+  print(method)
+  for (cell_type in cell_names) {
+    #some naming stuff for finding the right xai DGE file
+    class_xai <- switch(disease,
+                        "Hypertrophy" = "class_9",
+                        "HFpEF" = "class_10",
+                        "HFrEF" = "class_11",
+                        NULL)
+    
+    disease_xai <- disease
+    celltype_xai <- cell_type
+    if (disease_xai == "Hypertrophy") {disease_xai <- "AS"}
+    if (celltype_xai  == "Immune.cells") {celltype_xai <- "ImmuneCells"}
+    if (celltype_xai  == "Smooth.Muscle") {celltype_xai <- "SmoothMuscle"}
+    
+    #Xai_0_0_0_0
+    xai_path <- paste0("/media/Storage/anndata_shap/Z_SHAP/background_200_balanced_data/DGE_XAI_analysis_SHAP_tresh_0_log_0_avgExp_0_p_0/",method,"_test_on_",class_xai,"_Human_",celltype_xai,"_",disease_xai,"_Human_",celltype_xai,"_CTRL.xlsx")
+    
+    xai_DGE <- openxlsx::read.xlsx(xai_path)
+    
+    # Get information with Inverse and Direct into foldchange by changing inverse markers sign in the folchange
+    xai_DGE$avg_cube_root_FC <- ifelse(xai_DGE$predictor_type == "Inverse",(xai_DGE$avg_cube_root_FC*-1),xai_DGE$avg_cube_root_FC)
+    
+    OrgDb = org.Hs.eg.db
+    # define universe with ENTREZIDs as data frames
+    egallgenes_xai <- as.vector(rownames(Seu.Obj.annotated)) 
+    egallgenes_xai = clusterProfiler::bitr(egallgenes_xai, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+    #just with logfc
+    if (metric == "fc") {
+      egallgenes_xai$stat <- xai_DGE[["avg_cube_root_FC"]][match(egallgenes_xai$SYMBOL,xai_DGE$Feature)]
+      egallgenes_xai <- egallgenes_xai[complete.cases(egallgenes_xai),]
+  
+      mygeneList <- egallgenes_xai$stat
+      names(mygeneList) <- egallgenes_xai$ENTREZID
+      mygeneList <- mygeneList[!is.na(mygeneList)]
+      mygeneList <- sort(mygeneList,decreasing = T)
+    }
+    
+    if (metric == "fc_p") {
+      
+      ###with p-values used
+      #Merge log fold change (avg_cube_root_FC) and p-values into the gene list
+      egallgenes_xai <- egallgenes_xai %>%
+        left_join(xai_DGE %>% dplyr::select(Feature, avg_cube_root_FC, p_adj), by = c("SYMBOL" = "Feature"))
+  
+      egallgenes_xai$p_adj <- ifelse(egallgenes_xai$p_adj == 0, (.Machine$double.xmin*10), egallgenes_xai$p_adj)
+  
+      #with binning
+      egallgenes_xai <- egallgenes_xai %>%
+          mutate(
+            p_bin = case_when(
+              p_adj < 0.05 ~ 0.1,
+              TRUE ~ 1
+            ),
+            stat = sign(avg_cube_root_FC) * log10(abs(avg_cube_root_FC / p_bin)+1)
+          )
+      
+      #maximum finite positive and minimum finite negative values
+      max_finite <- max(egallgenes_xai$stat[is.finite(egallgenes_xai$stat)], na.rm = TRUE)
+      min_finite <- min(egallgenes_xai$stat[is.finite(egallgenes_xai$stat)], na.rm = TRUE)
+      
+      #Inf and -Inf replace with finite maximum or minimum
+      egallgenes_xai <- egallgenes_xai %>%
+        mutate(stat = ifelse(is.infinite(stat) & stat > 0, max_finite, stat),
+               stat = ifelse(is.infinite(stat) & stat < 0, min_finite, stat))
+    
+      #remove duplicates
+      egallgenes_xai <- egallgenes_xai[!(duplicated(egallgenes_xai$SYMBOL)),]
+  
+      #filter out 0s
+      egallgenes_xai <- egallgenes_xai[egallgenes_xai$stat != 0,]
+      egallgenes_xai <- egallgenes_xai[complete.cases(egallgenes_xai),]
+  
+      mygeneList <- egallgenes_xai$stat
+      names(mygeneList) <- egallgenes_xai$ENTREZID
+      mygeneList <- sort(mygeneList,decreasing = T)
+    }
+    
+    GO.GSEA <- clusterProfiler::gseGO(geneList = mygeneList,
+                     ont = "BP",
+                     OrgDb = OrgDb,
+                     keyType = "ENTREZID",
+                     minGSSize = 10,
+                     maxGSSize = 500,
+                     pvalueCutoff = 1,
+                     pAdjustMethod = "BH",
+                     verbose = FALSE,
+                     eps = 0,
+                     by= "fgsea",
+                     seed = 1234, 
+                     )
+    #save the sheet
+    GO.GSEA_save <- clusterProfiler::setReadable(GO.GSEA, OrgDb = OrgDb, keyType = "ENTREZID")
+    write.xlsx(GO.GSEA_save@result,paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/GSEA_",cell_type,"_",disease,"_",method,"_XAI_",metric,".xlsx"), rowNames=T)
+    
+    #save GO object
+    saveRDS(GO.GSEA,paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/GSEA_",cell_type,"_",disease,"_",method,"_XAI_",metric,".rds"))
+    
+  }
+}
+
+for (method in test.xai) {
+  print(method)
+  for (cell_type in cell_names) {
+    print(cell_type)
+    #some naming stuff for finding the right xai DGE file
+    class_xai <- switch(disease,
+                        "Hypertrophy" = "class_9",
+                        "HFpEF" = "class_10",
+                        "HFrEF" = "class_11",
+                        NULL)
+    
+    disease_xai <- disease
+    celltype_xai <- cell_type
+    if (disease_xai == "Hypertrophy") {disease_xai <- "AS"}
+    if (celltype_xai  == "Immune.cells") {celltype_xai <- "ImmuneCells"}
+    if (celltype_xai  == "Smooth.Muscle") {celltype_xai <- "SmoothMuscle"}
+    
+    if (method == "wilcoxon") {
+      method.test <- "wilcox"      
+    }
+
+    if(method == "t"){
+      method.test <- "t"
+    }
+    
+    GO.GSEA <- readRDS(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/",disease,"/GSEA_rds/GSEA_",cell_type,"_",disease,"_",method,"_XAI_",metric,".rds"))
+    
+    #grouping with clusterProfiler and filtering
+    GO.GSEA@result <- GO.GSEA@result[abs(GO.GSEA@result$NES) >=1.5,] #otherwise calculations takes forever
+    GO.GSEA <- clusterProfiler::simplify(GO.GSEA)
+    
+    showCategory_n <- 10 # number of terms
+    # GO.GSEA@result$Description <- sapply(GO.GSEA@result$Description, shorten_term)
+    
+    GO.GSEA@result$Description <- OrthoIntegrate::firstup(GO.GSEA@result$Description)
+    
+    rdgplot <- ridgeplot.gseaResult(GO.GSEA,showCategory = showCategory_n, label_format = 30, core_enrichment = T)+
+      labs(x="Enrichment distribution")
+    rdgplot +
+      theme(axis.text.x = element_text(color = "black",angle = 0, hjust = 0.5, size = 12, family = "Helvetica"),
+            axis.text.y = element_text(color = "black",face = "bold", size = 10, family = "Helvetica"),
+            axis.title.x = element_text(color = "black",face = "bold", size = 14, family = "Helvetica"),
+            axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+            plot.title = element_text(size = 14, hjust = 0.5, family = "Helvetica"),
+            plot.subtitle = element_text(size = 14, hjust = 0, family = "Helvetica"),
+            axis.line = element_line(color = "black"),
+            strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+            legend.text = element_text(size = 10, color = "black", family = "Helvetica"),
+            legend.title = element_text(size = 12, color = "black", family = "Helvetica", face = "bold", hjust =0.5))
+    
+    ggsave(filename = paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/GSEA_analysis_XAI_seurat/XAI_",method.test,"/ridgeplot_",showCategory_n,"_",disease,"_",cell_type,"_",method.test,"_",metric,"_XAI.pdf"), width = 5, height = 7)
+    
+    ggsave(filename = paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/GSEA_analysis_XAI_seurat/XAI_",method.test,"/ridgeplot_",showCategory_n,"_",disease,"_",cell_type,"_",method.test,"_",metric,"_XAI_small.pdf"), width = 5, height = 5.5)
+  }
+}  
+```
+
+#8. GSEA score calculation
+
+##8.1 For cell types per seurat wilcoxon & t and xai wilcoxon & t
+
+```{r}
+#Defintions of cell type specific GO terms
+library(GO.db)
+go_terms <- as.data.frame(GOTERM)
+#CM
+filtered_go_Cardiomyocytes <- go_terms[go_terms$Term %in% go_terms$Term[grepl("heart|cardiac|muscle|myocardium|contraction|sarcomere|cardiogenesis|hypertrophy|electrophysiology|ion transport|gap junction|mitochondria|angiogenesis|apoptosis|fibrosis|calcium ion",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Cardiomyocytes <- filtered_go_Cardiomyocytes[filtered_go_Cardiomyocytes$Ontology == "BP",]
+filtered_go_Cardiomyocytes <- unique(filtered_go_Cardiomyocytes$go_id)
+#EC
+filtered_go_Endothelial <- go_terms[go_terms$Term %in% go_terms$Term[grepl("endothelium|endothelial|heart|angiogenesis|vascularization|inflammation|vascular permeability|platelet activation|shear stress|cell adhesion|smooth muscle contraction|endothelial dysfunction|nitric oxide production|extracellular matrix|hypoxia|vascular remodeling",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Endothelial <- filtered_go_Endothelial[filtered_go_Endothelial$Ontology == "BP",]
+filtered_go_Endothelial <- unique(filtered_go_Endothelial$go_id)
+#FB
+filtered_go_Fibroblasts <- go_terms[go_terms$Term %in% go_terms$Term[grepl("fibroblast|extracellular matrix|extracellular structure|wound healing|wounding|tissue repair|heart|connective tissue|collagen|fibronectin|mesenchymal",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Fibroblasts <- filtered_go_Fibroblasts[filtered_go_Fibroblasts$Ontology == "BP",]
+filtered_go_Fibroblasts <- unique(filtered_go_Fibroblasts$go_id)
+#PC
+filtered_go_Pericytes <- go_terms[go_terms$Term %in% go_terms$Term[grepl("Pericyte|Blood vessel morphogenesis|heart|Regulation of vascular permeability|Angiogenesis|Vascular smooth muscle cell development|actin filament|Basement membrane organization|mesenchymal|extracellular matrix",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Pericytes <- filtered_go_Pericytes[filtered_go_Pericytes$Ontology == "BP",]
+filtered_go_Pericytes <- unique(filtered_go_Pericytes$go_id)
+#IC
+filtered_go_Immune.cells <- go_terms[go_terms$Term %in% go_terms$Term[grepl("Immune response|heart|Inflammation|Leukocyte activation|Cytokine production|Antigen presentation|T cell activation|B cell differentiation|Immune cell migration|Macrophage activation|Immune system development|Interleukin signaling",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Immune.cells <- filtered_go_Immune.cells[filtered_go_Immune.cells$Ontology == "BP",]
+filtered_go_Immune.cells <- unique(filtered_go_Immune.cells$go_id)
+#SMC
+filtered_go_Smooth.Muscle <- go_terms[go_terms$Term %in% go_terms$Term[grepl("Muscle contraction|heart|Smooth muscle|Actin filament|Muscle development|Vascular smooth muscle|Vasoconstriction|Extracellular matrix organization|Vascular remodeling|Response to mechanical stimulus|Muscle hypertrophy",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Smooth.Muscle <- filtered_go_Smooth.Muscle[filtered_go_Smooth.Muscle$Ontology == "BP",]
+filtered_go_Smooth.Muscle <- unique(filtered_go_Smooth.Muscle$go_id)
+#NC
+filtered_go_Neuro <- go_terms[go_terms$Term %in% go_terms$Term[grepl("Neuron differentiation|Axon|Neurogenesis|heart|Neuronal|Synapse organization|Neurotransmitter release|Dendrite development|Axonogenesis|Neuronal|Neuron|Nerve growth factor signaling|membran potential",go_terms$Term, ignore.case = TRUE)],]
+filtered_go_Neuro <- filtered_go_Neuro[filtered_go_Neuro$Ontology == "BP",]
+filtered_go_Neuro <- unique(filtered_go_Neuro$go_id)
+
+disease <- "Hypertrophy" # HFrEF, HFpEF
+cell_names <- c("Cardiomyocytes","Endothelial","Fibroblasts","Immune.cells","Neuro","Pericytes","Smooth.Muscle")
+path_GSEA <- paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/",disease)
+
+#collect results dataframe
+df.result <- data.frame(Celltype = character(), 
+                        Seurat_wilcox = numeric(),
+                        Seurat_t = numeric(),
+                        XAI_wilcox = numeric(),
+                        XAI_t = numeric(), 
+                        stringsAsFactors = FALSE)
+
+for (celltype in cell_names) {
+  
+  #load dynamically GO IDs for the corresponding celltype
+  go_id <- paste0("filtered_go_",celltype)
+  go_id <- get(go_id)
+  
+  #Seurat ratio t-test
+  GO.GSEA_seu_t <- read.xlsx(paste0(path_GSEA,"/GSEA_",celltype,"_",disease,"_t_seurat_fc_p.xlsx"), rowNames=F)
+  GO.GSEA_seu_t <- GO.GSEA_seu_t[GO.GSEA_seu_t$p.adjust <= 0.05,] #Only significant
+  
+  nr.inGO.seu_t = length(GO.GSEA_seu_t$ID[GO.GSEA_seu_t$ID %in% go_id])
+  nr.total.seu_t = length(GO.GSEA_seu_t$ID)
+
+  #Precision and Recall Seurat
+  TP.Seu_t = nr.inGO.seu_t
+  FP.Seu_t = nr.total.seu_t - TP.Seu_t
+  FN.Seu_t = length(go_id) - TP.Seu_t
+  
+  Prec.Seu_t  = TP.Seu_t / (TP.Seu_t+FP.Seu_t)
+  Rec.Seu_t = TP.Seu_t / (TP.Seu_t+FN.Seu_t)
+  #F1 calculation
+  F1.Seu_t = 2*(Prec.Seu_t*Rec.Seu_t/(Prec.Seu_t+Rec.Seu_t))
+  
+  
+  #Seurat ratio wilcoxon
+  GO.GSEA_wilcox <- read.xlsx(paste0(path_GSEA,"/GSEA_",celltype,"_",disease,"_wilcox_seurat_fc_p.xlsx"), rowNames=F)
+  GO.GSEA_wilcox <- GO.GSEA_wilcox[GO.GSEA_wilcox$p.adjust <= 0.05,] #Only significant
+  
+  nr.inGO.wilcox = length(GO.GSEA_wilcox$ID[GO.GSEA_wilcox$ID %in% go_id])
+  nr.total.wilcox = length(GO.GSEA_wilcox$ID)
+  ratio.wilcox = nr.inGO.wilcox/nr.total.wilcox
+  
+  #Precision and Recall wilcox
+  TP.wilcox = nr.inGO.wilcox
+  FP.wilcox = nr.total.wilcox - TP.wilcox
+  FN.wilcox = length(go_id) - TP.wilcox
+  
+  Prec.wilcox  = TP.wilcox / (TP.wilcox+FP.wilcox)
+  Rec.wilcox = TP.wilcox / (TP.wilcox+FN.wilcox)
+  
+  F1.wilcox = 2*(Prec.wilcox*Rec.wilcox/(Prec.wilcox+Rec.wilcox))
+  
+  #XAI ratio t-test
+  GO.GSEA_xai_t <- read.xlsx(paste0(path_GSEA,"/GSEA_",celltype,"_",disease,"_t_XAI_fc_p.xlsx"), rowNames=T)
+  GO.GSEA_xai_t <- GO.GSEA_xai_t[GO.GSEA_xai_t$p.adjust <= 0.05,] #Only significant
+  
+  nr.inGO.xai_t = length(GO.GSEA_xai_t$ID[GO.GSEA_xai_t$ID %in% go_id])
+  nr.total.xai_t = length(GO.GSEA_xai_t$ID)
+  ratio.xai_t = nr.inGO.xai_t/nr.total.xai_t
+  
+  #Precision and Recall xai_t
+  TP.xai_t = nr.inGO.xai_t
+  FP.xai_t = nr.total.xai_t - TP.xai_t
+  FN.xai_t = length(go_id) - TP.xai_t
+  
+  Prec.xai_t  = TP.xai_t / (TP.xai_t+FP.xai_t)
+  Rec.xai_t = TP.xai_t / (TP.xai_t+FN.xai_t)
+  
+  F1.xai_t = 2*(Prec.xai_t*Rec.xai_t/(Prec.xai_t+Rec.xai_t))
+  
+  #XAI ratio wilcox
+  GO.GSEA_xai_wilcox <- read.xlsx(paste0(path_GSEA,"/GSEA_",celltype,"_",disease,"_wilcoxon_XAI_fc_p.xlsx"), rowNames=T)
+  GO.GSEA_xai_wilcox <- GO.GSEA_xai_wilcox[GO.GSEA_xai_wilcox$p.adjust <= 0.05,] #Only significant
+  
+  nr.inGO.xai_wilcox = length(GO.GSEA_xai_wilcox$ID[GO.GSEA_xai_wilcox$ID %in% go_id])
+  nr.total.xai_wilcox = length(GO.GSEA_xai_wilcox$ID)
+  ratio.xai_wilcox = nr.inGO.xai_wilcox/nr.total.xai_wilcox
+  
+  #Precision and Recall xai_wilcox
+  TP.xai_wilcox = nr.inGO.xai_wilcox
+  FP.xai_wilcox = nr.total.xai_wilcox - TP.xai_wilcox
+  FN.xai_wilcox = length(go_id) - TP.xai_wilcox
+  
+  Prec.xai_wilcox  = TP.xai_wilcox / (TP.xai_wilcox+FP.xai_wilcox)
+  Rec.xai_wilcox = TP.xai_wilcox / (TP.xai_wilcox+FN.xai_wilcox)
+  
+  F1.xai_wilcox = 2*(Prec.xai_wilcox*Rec.xai_wilcox/(Prec.xai_wilcox+Rec.xai_wilcox))
+  
+  data.frame(Celltype = character(), 
+                        Seurat_wilcox = numeric(),
+                        Seurat_t = numeric(),
+                        XAI_wilcox = numeric(),
+                        XAI_t = numeric(), 
+                        stringsAsFactors = FALSE)
+  
+  #rbind results to the dataframe
+  df.result <- rbind(df.result, data.frame(Celltype = celltype,
+                                           Seurat_wilcox = F1.wilcox,
+                                           Seurat_t = F1.Seu_t,
+                                           XAI_t = F1.xai_t, 
+                                           XAI_wilcox = F1.xai_wilcox,
+                                           stringsAsFactors = FALSE))
+  
+  
+}
+#remove nan with 0s
+df.result <- df.result %>% 
+  mutate_all(~ ifelse(is.nan(.), 0, .))
+
+df.result.melt <- reshape2::melt(df.result)
+
+theme_box <- function(){
+  theme_bw() +
+    theme(
+      panel.border = element_rect(colour = "black", fill = NA, size = 1),
+      panel.grid.major = element_line(colour = "grey90", linetype = "dotted"),
+      panel.grid.minor = element_line(colour = "grey90", linetype = "dotted"),
+      axis.line = element_line(colour = "black"),
+      #facet_grid colors
+      strip.background = element_rect(fill = "lightgrey", colour = "black", size = 1),
+      strip.text = element_text(colour = "black", size = 12)
+    )
+}
+
+
+#add a grouping variable for data type
+df.result.melt$group <- plyr::revalue(df.result.melt$variable,
+                                  c("Seurat_wilcox" = "Expression",
+                                    "Seurat_t" = "Expression",
+                                    "XAI_wilcox" = "Shapley",
+                                    "XAI_t" = "Shapley"))
+
+#rename the variable to wilcoxon or t-test
+df.result.melt$variable <- plyr::revalue(df.result.melt$variable,
+                                  c("Seurat_wilcox" = "wilcoxon",
+                                    "Seurat_t" = "t-test",
+                                    "XAI_wilcox" = "wilcoxon",
+                                    "XAI_t" = "t-test"))
+#some naming
+df.result.melt$Celltype <- plyr::revalue(df.result.melt$Celltype,
+                                  c("Cardiomyocytes" = "CM",
+                                    "Endothelial" = "EC",
+                                    "Fibroblasts" = "FB",
+                                    "Immune.cells" = "IC",
+                                    "Neuro" = "NC",
+                                    "Pericytes" = "PC",
+                                    "Smooth.Muscle" = "SMC"))
+
+df.result.melt$group <- factor(df.result.melt$group, levels = c("Shapley","Expression"))
+
+
+dot_colours <- c("maroon","#2F4F4F","#DAA520","#2F4F4F", "tomato", "#b35900", "#236e00", "#7ad500", "#881800", "#004655","#6fa9a9","#DAA520")
+
+
+
+ggplot(df.result.melt, aes(x=variable, y=value, shape=group, color=group))+
+  geom_point(aes(shape=group, size=group), position = position_dodge(width = 0))+
+  theme_box() +
+  facet_grid(~Celltype, scales = "free")+
+  scale_color_manual(name="Value type",
+                     values =  dot_colours)+
+  scale_shape_manual(name="Value type",
+                     values = c(17,16))+
+  scale_size_manual(name="Value type",
+                    values = c(4,4))+
+  ylim(0, max(df.result.melt$value)*1.2)+
+  labs(title = paste0("GSEA - Comparison of Human ", disease," vs healthy"), y = "F1 - Score", hjust=0.5) +
+  theme(axis.text.x = element_text(color = "black", size = 14,angle = 45,hjust = 1, family = "Helvetica"),
+        # axis.text.x = element_blank(),
+        axis.text.y = element_text(color = "black", size = 14, family = "Helvetica"),
+        axis.title.x = element_blank(),
+        axis.title = element_text(size = 14, color = "black", family = "Helvetica"),
+        plot.title = element_text(size = 14, hjust = 0, face ="bold", family = "Helvetica"),
+        axis.line = element_line(color = "black"),
+        strip.text.x = element_text(size = 14, color = "black", family = "Helvetica"),
+        legend.text = element_text(size = 10, color = "black", family = "Helvetica"),
+        legend.title = element_text(size = 10, color = "black", family = "Helvetica", face = "bold", hjust =0.5),
+        panel.spacing = unit(0, "lines"))
+
+#save frame
+write.xlsx(df.result.melt, paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/scatterplots/Figure4/between_value_type/log2fc_p_with_bin/excels_to_plots/Human_GSEA_F1_score_",disease,"_vs_healthy_wilcoxon_t_test.xlsx"))
+
+ggsave(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/scatterplots/Figure4/between_value_type/Human_GSEA_F1_score_",disease,"_vs_healthy_wilcoxon_t_test.pdf"), width = 6.5, height = 3)
+dev.off()
+
+```
+
+#9. Circos plot of terms found in GSEA for XAI t-test and seurat wilcox
+
+```{r}
+#initalize cell type and disease, set testmethod for loading correct GO results
+test.Seurat <- "wilcox"
+disease <- "HFpEF"
+cell_name <- "Cardiomyocytes"
+metric <- "fc_p" # folchange+pvalue= fc_p, only foldchange = fc
+GSEA_Seurat_CM_HFpEF <- readRDS(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/",disease,"/GSEA_rds/GSEA_",cell_name,"_",disease,"_",test.Seurat,"_seurat_",metric,".rds"))
+
+test.xai <- "t"
+GSEA_XAI_CM_HFpEF <- readRDS(paste0("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/GSEAs/",disease,"/GSEA_rds/GSEA_",cell_name,"_",disease,"_",method,"_XAI_",metric,".rds"))
+
+#combine the information we want to plot
+GO_IDs_Seurat <- data.frame(IDs=GSEA_Seurat_CM_HFpEF@result$ID,
+                            p_value = GSEA_Seurat_CM_HFpEF@result$p.adjust,
+                            NES = GSEA_Seurat_CM_HFpEF@result$NES)
+#subset by sig
+GO_IDs_Seurat <- GO_IDs_Seurat[GO_IDs_Seurat$p_value < 0.05,]
+
+
+GO_IDs_XAI <- data.frame(IDs=GSEA_XAI_CM_HFpEF@result$ID,
+                            p_value = GSEA_XAI_CM_HFpEF@result$p.adjust,
+                            NES = GSEA_XAI_CM_HFpEF@result$NES)
+#subset by sig
+GO_IDs_XAI <- GO_IDs_XAI[GO_IDs_XAI$p_value < 0.05,]
+
+
+#get the common ones
+common_ids <- intersect(GO_IDs_Seurat$IDs, GO_IDs_XAI$IDs)
+unique_seurat <- setdiff(GO_IDs_Seurat$IDs, GO_IDs_XAI$IDs)
+unique_xai <- setdiff(GO_IDs_XAI$IDs, GO_IDs_Seurat$IDs)
+
+
+outer_ring <- data.frame(
+  group = c(rep("Expression", length(GO_IDs_Seurat$IDs)),
+            rep("Shapley", length(GO_IDs_XAI$IDs))),
+  IDs = c(GO_IDs_Seurat$IDs, GO_IDs_XAI$IDs)
+)
+
+library(circlize)
+
+#sectors
+sectors <- c("Expression", "Shapley")
+
+
+# Count the number of GO terms in each group
+go_counts <- table(outer_ring$group)
+total_go_terms <- sum(go_counts)
+
+prop_exp <- go_counts["Expression"] / total_go_terms
+prop_shap <- go_counts["Shapley"] / total_go_terms
+  
+xlim_plot <- rbind(c(0, prop_exp), c(prop_exp, 1))
+
+#init circlize plot
+
+pdf("/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/circos/CM_HFpEF/circos_GSEA_sig_HFpEF_CM.pdf", width = 5, height = 5)
+
+circos.clear()
+
+#init sectors
+circos.par(start.degree = 90, gap.degree = 10, cell.padding = c(0,0,0,0))
+circos.initialize(sectors, xlim=xlim_plot)
+
+
+circos.track(
+  ylim = c(0, 1),
+  track.height = 0.1,
+  bg.col = NA,
+  bg.border = NA,  
+  panel.fun = function(x, y) {
+    circos.text(CELL_META$xcenter,
+                CELL_META$cell.ylim[1] + 0.5,
+                CELL_META$sector.index,
+                facing = "bending.inside",
+                cex = 1,
+                font = 2)
+  }
+)
+
+
+#add outer ring
+circos.track(
+  ylim = c(0, 1),
+  track.height = 0.3,
+  bg.col = c("#819494ff","#b35566ff"),
+  panel.fun = function(x, y) {
+    # Get the current sector
+    sector_index <- CELL_META$sector.index
+    
+    # Get the GO IDs for the current sector
+    ids <- outer_ring$IDs[outer_ring$group == sector_index]
+    
+    # Calculate positions along the arc
+    positions <- seq(0, 1, length.out = length(ids) + 1)[-1]  # Exclude first point
+  }
+)
+
+circos.link(
+  sector.index1 = "Expression",
+  point1 = c(0, shared_terms / go_counts["Expression"]), # Proportion within "Expression"
+  sector.index2 = "Shapley",
+  point2 = c(prop_exp, prop_exp + (shared_terms / go_counts["Shapley"]) * (1 - prop_exp)), # Adjusted for "Shapley" xlim
+  col = rgb(0.5, 0.5, 0.5, alpha = 0.5), # Gray with transparency
+  border = T,
+  h.ratio = 0.5
+)
+
+#ADD a layer with how many of the true positives where found 
+found_tp_seurat <- GO_IDs_Seurat$IDs[GO_IDs_Seurat$IDs %in% filtered_go_Cardiomyocytes]
+#shared ones
+found_tp_seurat_shared <- found_tp_seurat[found_tp_seurat %in% found_tp_xai]
+found_tp_seurat_only <- found_tp_seurat[!found_tp_seurat %in% found_tp_xai]
+
+#for xai
+found_tp_xai <- GO_IDs_XAI$IDs[GO_IDs_XAI$IDs %in% filtered_go_Cardiomyocytes]
+found_tp_xai_shared <- found_tp_xai[found_tp_xai %in% found_tp_seurat]
+found_tp_xai_only <- found_tp_xai[!found_tp_xai %in% found_tp_seurat]
+
+prop_seurat_shared <- length(found_tp_seurat_shared) / length(found_tp_seurat)
+prop_seurat_only <- length(found_tp_seurat_only) / length(found_tp_seurat)
+
+# Shapley group
+prop_xai_shared <- length(found_tp_xai_shared) / length(found_tp_xai)
+prop_xai_only <- length(found_tp_xai_only) / length(found_tp_xai)
+
+# Add proportional chord for shared terms
+circos.track(
+  ylim = c(0, 1), # Set limits for the track
+  track.height = 0.05, # Height of the ring
+  bg.border = NA, # No border for the track
+  panel.fun = function(x, y) {
+    # Get the current sector
+    sector_index <- CELL_META$sector.index
+    
+    # Determine the value to display
+    if (sector_index == "Expression") {
+      # Proportion of found true positives in Expression
+      proportion_found <- length(found_tp_seurat) / go_counts["Expression"]
+      xleft.stat <- 0.25
+      xright.stat <- xleft.stat*proportion_found
+      
+      circos.rect(
+        xleft = xleft.stat,
+        xright = xleft.stat+proportion_found, #TODO generalize in future use
+        ybottom = 0,
+        ytop = 1, # Full height of the ring
+        col = "#DAA520",
+        border = "black"
+      )
+    } else if (sector_index == "Shapley") {
+      # Proportion of found true positives in Shapley
+      proportion_found <- length(found_tp_xai) / go_counts["Shapley"]
+      xleft.stat <- 0.78
+      xright.stat <- xleft.stat*proportion_found
+      
+      circos.rect(
+        xleft = xleft.stat,
+        xright = xleft.stat+xright.stat, #TODO generalize in future use
+        ybottom = 0,
+        ytop = 1, # Full height of the ring
+        col = "#DAA520",
+        border = "black"
+      )
+    }
+    
+  }
+)
+
+
+dev.off()
+
+```
+
