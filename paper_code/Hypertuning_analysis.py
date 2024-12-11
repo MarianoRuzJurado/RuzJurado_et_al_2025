@@ -439,3 +439,86 @@ ax.set_title('3D Scatter Plot of Loss vs Average Neuron Values')
 plt.show()
 plt.savefig("/media/Helios_scStorage/Mariano/NN_Human_Mice/hypertuning/plot/MLP_3d_hypertuning_plot.pdf")
 plt.close()
+# Make a 2D plot out of it
+
+# Define custom colormap
+colors = [(128/255, 0, 0),
+          (135/255, 0, 0),
+          (150/255, 0, 0),
+          (71/255, 121/255, 121/255),
+          (62/255, 105/255, 105/255),
+          (47/255, 79/255, 79/255)]
+custom_cmap = LinearSegmentedColormap.from_list("CustomCmap", colors)
+
+#reorder layers and values for plot
+loss_values_list = [loss_values_3, loss_values_1, loss_values_2, loss_values_5, loss_values_6, #loss_values_3 and _4 are both runs with 2 layers, keep the one with better result
+                    loss_values_7, loss_values_8, loss_values_9, loss_values_10]
+
+averages_comb_list = [averages_3, averages_1, averages_2, averages_5, averages_6,
+                      averages_7, averages_8, averages_9, averages_10]
+
+# Initialize a list to store the minimum loss values
+loss_min_values = []
+averages_comb_min = []
+
+# Loop through the list of loss values lists
+for loss_values in loss_values_list:
+    min_loss_index = np.argmin(loss_values)
+    loss_min = loss_values[min_loss_index]
+    loss_min_values.append(loss_min)
+
+for loss_values, avg_comb in zip(loss_values_list, averages_comb_list):
+    min_loss_index = np.argmin(loss_values)
+    avg_min = avg_comb[min_loss_index]
+    averages_comb_min.append(avg_min)
+
+norm = plt.Normalize(800, 2600)
+
+# Scatter plot
+fig = plt.figure()
+
+ax = fig.add_subplot()
+ax.grid(False)
+
+scatter = ax.scatter(np.unique(layers_comb_filtered),
+                     loss_min_values,
+                     c=averages_comb_min,
+                     cmap=custom_cmap,
+                     norm=norm,
+                     alpha=0.95,
+                     s=80
+                     )
+
+
+# Add a colorbar
+cbar = plt.colorbar(scatter, ax=ax)
+cbar.set_label('Number of neurons')
+cbar.set_ticks(range(800, 2800, 300))
+
+
+# Connect the dots with a line
+ax.plot(np.unique(layers_comb_filtered), loss_min_values, color='black', linestyle='--', alpha=0.20)
+
+ax.tick_params(right=True,
+               top=True,
+               direction='in',
+               length=7)
+ax.tick_params(which='minor',
+               right=True,
+               top=True,
+               direction='in',
+               length=4)
+
+# Set the number of ticks on the y-axis to 5
+ax.yaxis.set_major_locator(MaxNLocator(nbins=6))
+plt.xticks([2,3,4,5,6,7,8,9,10])
+
+# Labeling axes
+ax.set_xlabel('Number of Layers')
+ax.set_ylabel('F1-Loss')
+
+# Title
+ax.set_title('Relation between F1-Loss and Layers')
+plt.show()
+plt.savefig("/Users/mariano/Desktop/Work_PhD/PaperNN/Fig.2/mlp_new/MLP_2d_hypertuning_plot_10_layers.pdf")
+plt.close()
