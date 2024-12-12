@@ -182,6 +182,7 @@ pattern_1=[1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] # start pattern 1 at Human CM 
 pattern_2=[1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]  # start pattern 2  at Human CM CTRL
 shap_class=9 # Start at shap values from AS
 
+#adjust thresholds, 0 for GSEA, otherwise use defaults
 for i in range(7*3):
     simpleclass(adata_com,
                 shap_class=shap_class,
@@ -212,10 +213,10 @@ for i in range(7*3):
                 pattern_2=pattern_2,
                 testing_method="wilcoxon", # write either t or wilcoxon
                 sparse_matrix=False,
-                SHAP_thresh = 0,
-                logfc_thresh = 0,
-                expression_threshold_test_data=0,
-                p_adj_thresh=1,
+                SHAP_thresh = 0.01,
+                logfc_thresh = 0.1,
+                expression_threshold_test_data=1,
+                p_adj_thresh=0.05,
                 ground_truth='/media/Helios_scStorage/Mariano/NN_Human_Mice/f1_loss_runs_24_06_18/240830_SHAP_set_balanced_200_per_celltype_labels_binarized.csv',
                 ground_truth_exp=dataset_test,
                 outDir='/media/Storage/anndata_shap/Z_SHAP/background_200_balanced_data')
