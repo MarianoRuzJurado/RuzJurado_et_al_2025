@@ -15,16 +15,23 @@ Figure2d: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/a7141a6f
 Figure2e: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/04cf334f99c35d02f4b2918f1a63f9756b9a7965/paper_code/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L84
 Figure2f: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/04cf334f99c35d02f4b2918f1a63f9756b9a7965/paper_code/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L146
 
-Figure3b:
+Figure3b: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/dc7bf89208cd13d4f6d7dc4e89cd91ee56814d68/paper_code/UP_shap_analysis.py#L73
 Figure3c: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/f428f71b961908e2aae4ab83a7d480ea58be445c/paper_code/UP_predictors_expression_RuzJurado_et_al_2024.Rmd#L73
 Figure3d: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/f428f71b961908e2aae4ab83a7d480ea58be445c/paper_code/UP_predictors_expression_RuzJurado_et_al_2024.Rmd#L38
-Figure3e:
+Figure3e: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/dc7bf89208cd13d4f6d7dc4e89cd91ee56814d68/paper_code/UP_shap_analysis.py#L73
 Figure3f: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/f428f71b961908e2aae4ab83a7d480ea58be445c/paper_code/UP_predictors_expression_RuzJurado_et_al_2024.Rmd#L121
 Figure3g: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/f428f71b961908e2aae4ab83a7d480ea58be445c/paper_code/UP_predictors_expression_RuzJurado_et_al_2024.Rmd#L105
-Figure3h:
+Figure3h: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/dc7bf89208cd13d4f6d7dc4e89cd91ee56814d68/paper_code/UP_shap_analysis.py#L73
 Figure3i: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/f428f71b961908e2aae4ab83a7d480ea58be445c/paper_code/UP_predictors_expression_RuzJurado_et_al_2024.Rmd#L177
 Figure3j: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/f428f71b961908e2aae4ab83a7d480ea58be445c/paper_code/UP_predictors_expression_RuzJurado_et_al_2024.Rmd#L161
 
+Figure4b: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/dc7bf89208cd13d4f6d7dc4e89cd91ee56814d68/paper_code/UP_shap_analysis.py#L185
+and
+https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/4b0f555c2f492c83c6e621650a7918ad103ca074/paper_code/UP_Seurat_DGE_analysis_RuzJurado_et_al_2024.Rmd#L35
+Figure4c: 
+Figure4d: 
+Figure4e: 
+Figure4f: 
 
 # Extended Data Figure Destinations:
 
@@ -50,12 +57,12 @@ Extended Data Figure 4g: https://github.com/MarianoRuzJurado/RuzJurado_et_al_202
 Extended Data Figure 4h: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/a7141a6f6dece2b0f3cb8b68f3f1171eb510fb45/paper_code/main.py#L288
 Extended Data Figure 4i: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/a7141a6f6dece2b0f3cb8b68f3f1171eb510fb45/paper_code/main.py#L298
 
-Extended Data Figure 5:
+Extended Data Figure 5: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/dc7bf89208cd13d4f6d7dc4e89cd91ee56814d68/paper_code/UP_shap_analysis.py#L73
 
-Extended Data Figure 6a:
+Extended Data Figure 6a: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/dc7bf89208cd13d4f6d7dc4e89cd91ee56814d68/paper_code/UP_shap_analysis.py#L73
 Extended Data Figure 6b: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/f428f71b961908e2aae4ab83a7d480ea58be445c/paper_code/UP_predictors_expression_RuzJurado_et_al_2024.Rmd#L321
 Extended Data Figure 6c: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/f428f71b961908e2aae4ab83a7d480ea58be445c/paper_code/UP_predictors_expression_RuzJurado_et_al_2024.Rmd#L337
-Extended Data Figure 6d:
+Extended Data Figure 6d: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/dc7bf89208cd13d4f6d7dc4e89cd91ee56814d68/paper_code/UP_shap_analysis.py#L73
 Extended Data Figure 6e: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/f428f71b961908e2aae4ab83a7d480ea58be445c/paper_code/UP_predictors_expression_RuzJurado_et_al_2024.Rmd#L260
 Extended Data Figure 6f: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/f428f71b961908e2aae4ab83a7d480ea58be445c/paper_code/UP_predictors_expression_RuzJurado_et_al_2024.Rmd#L211
 
