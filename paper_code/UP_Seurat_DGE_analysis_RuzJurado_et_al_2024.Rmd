@@ -1,0 +1,373 @@
+---
+title: 'NN Paper Final Script: Seurat DGE analysis'
+author: "Mariano Ruz Jurado"
+date: "2024-07-15"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+#0. Load essential libraries
+```{r}
+#load libraries
+library(Seurat)
+library(tidyverse)
+library(svglite)
+library(ggplot2)
+library(ggpubr)
+library(openxlsx)
+source("/media/EOS_ZMM_shared/Bioinformatic/scRNA-SEQ-ZMM/Import10X-HelperFunctions_SeuratV3.R")
+source("/media/EOS_ZMM_shared/Bioinformatic/scRNA-SEQ-ZMM/Mariano_functions.R")
+outputFolder <- "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE"
+sink(file = paste0(outputFolder,"/NN_Paper_Script.log"), append = TRUE, split = TRUE)
+```
+
+#1. Load Seurat object containing HF expression data
+```{r}
+# load object
+Seu.Obj.annotated <- readRDS(file = "/media/Helios_scStorage/Mariano/Human_Mice_Comparison/Human_Mice_Integrated/Seurat_and_R_objects/SeuratObject.combined.integrated.annotated_10_08_22.rds")
+DefaultAssay(object = Seu.Obj.annotated) <- "RNA"
+
+```
+
+#2. DGE analysis per species and cell type
+```{r}
+#RUN DEG analysis for every celltype HUMAN
+Seu.Obj.Human <- subset(Seu.Obj.annotated, subset = species == "Human")
+
+Idents(Seu.Obj.Human) <-"disease"
+Human_markers_final <- data.frame() # create collector dataframe
+for (celltype in unique(Seu.Obj.Human$cell_type)) {
+  print(celltype)
+  Human.HF.Seu.celltype = subset(Seu.Obj.Human, subset = cell_type == celltype)
+  # running find markers condition specific
+  for (j in unique(Human.HF.Seu.celltype$disease)) {
+    ident.1 <- j
+    if (ident.1 == "Hypertrophy") {ident.2 <- "CTRL.SP"} else (ident.2 <- "CTRL.LV")
+    print(ident.1)
+    if (ident.1 != "CTRL.SP" && ident.1 != "CTRL.LV" && celltype != "Unknown") {
+
+    Human_Markers <- FindMarkers(object = Human.HF.Seu.celltype,
+                                ident.1 = ident.1,
+                                ident.2 = ident.2,
+                                min.pct = 0,
+                                logfc.threshold = 0,
+                                assay = "RNA",
+                                only.pos = F,
+                                test.use = "t")
+    
+    Human_Markers <- rownames_to_column(Human_Markers)
+    Human_Markers[["disease"]] <- ident.1
+    Human_Markers[["celltype"]] <- celltype
+    Human_markers_final <- rbind(Human_markers_final, Human_Markers)    
+    }
+  }
+}
+
+#without filtering p's
+names(Human_markers_final)[names(Human_markers_final) == "rowname"] <- "gene"
+write.xlsx(Human_markers_final,file=paste0(outputFolder,"/DGE_Human_HF_min_pct_0_logfc_0_for_GSEA.xlsx"), colNames = T, rowNames = F)
+
+#with filtering p's
+Human_markers_final <- Human_markers_final[Human_markers_final$p_val_adj<=0.05,]
+names(Human_markers_final)[names(Human_markers_final) == "rowname"] <- "gene"
+write.xlsx(Human_markers_final,file=paste0(outputFolder,"/DGE_Human_HF_min_pct_0.1_logfc_0.1.xlsx"), colNames = T, rowNames = F)
+
+
+```
+
+##2.1 DGE analysis using every method in seurat HUMAN
+
+```{r}
+#repat with and without thresholds, without for GSEA analysis
+
+#RUN DEG analysis for every celltype HUMAN
+Seu.Obj.Human <- subset(Seu.Obj.annotated, subset = species == "Human")
+
+Idents(Seu.Obj.Human) <-"disease"
+Human_markers_final <- data.frame(
+  rowname = character(),
+  disease = character(),
+  celltype = character(),
+  p_val = numeric(),
+  p_val_adj = numeric(),
+  testmethod = character(),
+  avg_log2FC = numeric(),
+  pct.1 = numeric(),
+  pct.2 = numeric(),
+  stringsAsFactors = FALSE
+)
+
+test.Seurat <- c("wilcox","wilcox_limma","bimod","t","negbinom","poisson","LR","MAST")
+# test.seurat <- c("wilcox", "t")# specific
+for (tests in test.Seurat) {
+  print(tests)
+  for (celltype in unique(Seu.Obj.Human$cell_type)) {
+    print(celltype)
+    Human.HF.Seu.celltype = subset(Seu.Obj.Human, subset = cell_type == celltype)
+    # running find markers condition specific
+    for (j in unique(Human.HF.Seu.celltype$disease)) {
+      ident.1 <- j
+      if (ident.1 == "Hypertrophy") {ident.2 <- "CTRL.SP"} else (ident.2 <- "CTRL.LV")
+      print(ident.1)
+      if (ident.1 != "CTRL.SP" && ident.1 != "CTRL.LV" && celltype != "Unknown") {
+      
+  
+        Human_Markers <- FindMarkers(object = Human.HF.Seu.celltype,
+                                    ident.1 = ident.1,
+                                    ident.2 = ident.2,
+                                    min.pct = 0.1, # change to 0 for GSEA DEG lists
+                                    logfc.threshold = 0.1, # change to 0 for GSEA DEG lists
+                                    assay = "RNA",
+                                    only.pos = F,
+                                    test.use = tests)
+        
+        Human_Markers <- rownames_to_column(Human_Markers)
+        Human_Markers[["disease"]] <- ident.1
+        Human_Markers[["celltype"]] <- celltype
+        Human_Markers[["testmethod"]] <- tests
+        
+        #Roc is special...
+        roc_require <- c("myAUC","power","avg_diff")
+        if (tests == "roc") {
+          Human_Markers$p_val <- NA
+          Human_Markers$p_val_adj <- NA
+          Human_markers_final$myAUC <- NA
+          Human_markers_final$power <- NA
+          Human_markers_final$avg_diff <- NA
+        }
+        
+        if (all(roc_require %in% colnames(Human_Markers)) | all(roc_require %in% colnames(Human_markers_final))) {
+            Human_markers_final <- merge(Human_markers_final, Human_Markers,
+                               by=c("rowname", "disease","celltype", "p_val", "p_val_adj",
+                                    "testmethod","avg_log2FC","pct.1", "pct.2","myAUC","power","avg_diff"),
+                               all=TRUE)
+        }else{
+            Human_markers_final <- merge(Human_markers_final, Human_Markers,
+                               by=c("rowname", "disease","celltype", "p_val", "p_val_adj",
+                                    "testmethod","avg_log2FC","pct.1", "pct.2"),
+                               all=TRUE)
+        }
+      }
+    }
+  }
+}  
+
+test.Seurat <- c("roc")
+Human_markers_final.roc <- data.frame() # create collector dataframe
+for (tests in test.Seurat) {
+  print(tests)
+  for (celltype in unique(Seu.Obj.Human$cell_type)) {
+    print(celltype)
+    Human.HF.Seu.celltype = subset(Seu.Obj.Human, subset = cell_type == celltype)
+    # running find markers condition specific
+    for (j in unique(Human.HF.Seu.celltype$disease)) {
+      ident.1 <- j
+      if (ident.1 == "Hypertrophy") {ident.2 <- "CTRL.SP"} else (ident.2 <- "CTRL.LV")
+      print(ident.1)
+      if (ident.1 != "CTRL.SP" && ident.1 != "CTRL.LV" && celltype != "Unknown") {
+      
+  
+        Human_Markers <- FindMarkers(object = Human.HF.Seu.celltype,
+                                    ident.1 = ident.1,
+                                    ident.2 = ident.2,
+                                    min.pct = 0.1,
+                                    logfc.threshold = 0.1,
+                                    assay = "RNA",
+                                    only.pos = F,
+                                    test.use = tests)
+        
+        Human_Markers <- rownames_to_column(Human_Markers)
+        Human_Markers[["disease"]] <- ident.1
+        Human_Markers[["celltype"]] <- celltype
+        Human_Markers[["testmethod"]] <- tests
+        
+
+        
+        Human_markers_final.roc <- rbind(Human_markers_final.roc, Human_Markers)
+        
+      }
+    }
+  }
+}  
+
+write.xlsx(Human_markers_final,file=paste0(outputFolder,"/DGE_Seurat_ALL_except_DESEq2_Test_Human_HF_min_pct_0.1_logfc_0.1.xlsx"), colNames = T, rowNames = F)
+
+Human_markers_final  <- openxlsx::read.xlsx(paste0(outputFolder,"/DGE_Seurat_ALL_except_DESEq2_Test_Human_HF_min_pct_0.1_logfc_0.1.xlsx"), colNames = T, rowNames =F)
+#roc lines
+roc_human_markers_final <- Human_markers_final[Human_markers_final$testmethod=="roc",]
+roc_human_markers_final <- roc_human_markers_final[!is.na(roc_human_markers_final$myAUC),]
+
+Human_markers_final <- Human_markers_final[Human_markers_final$p_val_adj<=0.05,] #not applicable for roc, adjust!
+Human_markers_final <- Human_markers_final[!is.na(Human_markers_final$p_val_adj),]
+
+Human_markers_final <- rbind(Human_markers_final, roc_human_markers_final)
+names(Human_markers_final)[names(Human_markers_final) == "rowname"] <- "gene"
+
+write.xlsx(Human_markers_final,file=paste0(outputFolder,"/DGE_Seurat_ALL_except_DESEq2_Test_Human_HF_min_pct_0.1_logfc_0.1.xlsx"), colNames = T, rowNames = F)
+
+
+
+#Still need DESeq2 analysis, since it does need adjustments
+pseudo_Seu <- AggregateExpression(Seu.Obj.Human, assays = "RNA", return.seurat = T, group.by = c("disease","orig.ident", "cell_type"))
+Cells(pseudo_Seu)
+pseudo_Seu$celltype.dis <- paste(pseudo_Seu$cell_type, pseudo_Seu$disease, sep = "_")
+
+Idents(pseudo_Seu) <- "celltype.dis"
+Human_markers_final_dds <- data.frame() # create collector dataframe
+for (celltype in unique(pseudo_Seu$cell_type)) {
+    print(celltype)
+    # running find markers condition specific
+    for (disease in unique(pseudo_Seu$disease)) {
+      if (disease == "Hypertrophy") {ctrl <- "CTRL.SP"} else (ctrl <- "CTRL.LV")
+      print(disease)
+      print(ctrl)
+      if (disease != "CTRL.SP" && disease != "CTRL.LV" && celltype != "Unknown") {
+        
+        #build the ident.1 ad ident.2
+        ident.1 <- paste0(c(celltype,disease), collapse = "_")
+        ident.2 <- paste0(c(celltype,ctrl), collapse = "_")
+        
+        Human_Markers <- FindMarkers(object = pseudo_Seu,
+                                    ident.1 = ident.1,
+                                    ident.2 = ident.2,
+                                    min.pct = 0.1,
+                                    logfc.threshold = 0.1,
+                                    assay = "RNA",
+                                    only.pos = F,
+                                    test.use = "DESeq2",
+                                    min.cells.group = 2)
+        
+        Human_Markers <- rownames_to_column(Human_Markers)
+        Human_Markers[["disease"]] <- disease
+        Human_Markers[["celltype"]] <- celltype
+        Human_Markers[["testmethod"]] <- "DESeq2"
+        Human_markers_final_dds <- rbind(Human_markers_final_dds, Human_Markers)    
+    }    
+  }
+}
+
+Human_markers_final_dds <- Human_markers_final_dds[Human_markers_final_dds$p_val_adj<=0.05,]
+Human_markers_final_dds <- Human_markers_final_dds[abs(Human_markers_final_dds$avg_log2FC) >= 0.1,]
+names(Human_markers_final_dds)[names(Human_markers_final_dds) == "rowname"] <- "gene"
+
+write.xlsx(Human_markers_final_dds,file=paste0(outputFolder,"/DGE_DESeq2_Human_HF_min_pct_0.1_logfc_0.1.xlsx"), colNames = T, rowNames = F)
+
+
+#Combine all the results in one dataframe, make some column adjustsments to bind the dataframes
+Human_markers_final_dds <- openxlsx::read.xlsx(xlsxFile = paste0(outputFolder,"/DGE_DESeq2_Human_HF_min_pct_0.1_logfc_0.1.xlsx"), colNames = T, rowNames = F)
+Human_markers_final_dds$myAUC <- NA
+Human_markers_final_dds$power <- NA
+Human_markers_final_dds$avg_diff <- NA
+
+Human_markers_final <- openxlsx::read.xlsx(xlsxFile=paste0(outputFolder,"/DGE_Seurat_ALL_except_DESEq2_Test_Human_HF_min_pct_0.1_logfc_0.1.xlsx"), colNames = T, rowNames = F)
+Human_markers_final <- Human_markers_final[Human_markers_final$p_val_adj<=0.05,] #not applicable for roc, adjust!
+Human_markers_final <- Human_markers_final[!is.na(Human_markers_final$p_val_adj),]
+names(Human_markers_final)[names(Human_markers_final) == "rowname"] <- "gene"
+
+Human_markers_roc <- openxlsx::read.xlsx(xlsxFile=paste0(outputFolder,"/DGE_Seurat_roc_Test_Human_HF_min_pct_0.1_logfc_0.1.xlsx"), colNames = T, rowNames = F)
+Human_markers_roc <- Human_markers_roc[Human_markers_roc$myAUC>=0.5,]
+names(Human_markers_roc)[names(Human_markers_roc) == "rowname"] <- "gene"
+Human_markers_roc$p_val <- NA
+Human_markers_roc$p_val_adj <- NA
+
+H.markers_dds_final <- rbind(Human_markers_final_dds, Human_markers_final)
+H.markers_comb <- rbind(H.markers_dds_final, Human_markers_roc)
+
+write.xlsx(H.markers_comb,file=paste0(outputFolder,"/DGE_COMPLETE_Human_HF_min_pct_0.1_logfc_0.1.xlsx"), colNames = T, rowNames = F)
+
+
+H.markers_comb <- openxlsx::read.xlsx(paste0(outputFolder,"/DGE_COMPLETE_Human_HF_min_pct_0.1_logfc_0.1.xlsx"), colNames = T, rowNames = F)
+
+#Pick random genes to show how good random find the genes
+set.seed(1234)
+Human_markers_rdm_final <- data.frame()
+#pick as many genes as the mean gene number for that cell type
+for (celltype in unique(Seu.Obj.Human$cell_type)) {
+    print(celltype)
+    # running find markers condition specific
+    for (disease in unique(Seu.Obj.Human$disease)) {
+      if (disease == "Hypertrophy") {ctrl <- "CTRL.SP"} else (ctrl <- "CTRL.LV")
+      print(disease)
+      print(ctrl)
+      if (disease != "CTRL.SP" && disease != "CTRL.LV" && celltype != "Unknown") {
+        
+        H.markers_comb_sub <- H.markers_comb[H.markers_comb$disease == disease & H.markers_comb$celltype == celltype,]
+        mean_genes <- H.markers_comb_sub %>% 
+          dplyr::group_by(testmethod) %>%
+          dplyr::summarise(num_genes = n()) %>%
+          dplyr::summarise(mean_genes = mean(num_genes))
+        random_genes <- sample(rownames(Seu.Obj.Human), round(mean_genes$mean_genes))
+        #rebuild dataframe to match the DGE result
+        Human_markers_rdm <- data.frame(
+          rowname = random_genes,
+          disease = NA,
+          celltype = NA,
+          p_val = NA,
+          p_val_adj = NA,
+          testmethod = NA,
+          avg_log2FC = NA,
+          pct.1 = NA,
+          pct.2 = NA,
+          stringsAsFactors = FALSE,
+          myAUC = NA,
+          power = NA,
+          avg_diff = NA
+        )
+        
+        Human_markers_rdm[["disease"]] <- disease
+        Human_markers_rdm[["celltype"]] <- celltype
+        Human_markers_rdm[["testmethod"]] <- "Random"
+        Human_markers_rdm_final <- rbind(Human_markers_rdm_final, Human_markers_rdm)    
+    }    
+  }
+}
+names(Human_markers_rdm_final)[names(Human_markers_rdm_final) == "rowname"] <- "gene"
+
+write.xlsx(Human_markers_rdm_final,file=paste0(outputFolder,"/DGE_RANDOM_Human_HF.xlsx"), colNames = T, rowNames = F)
+
+#make last big df out of previous results and random
+H.markers_comb_rdm <- rbind(H.markers_comb, Human_markers_rdm_final)
+write.xlsx(H.markers_comb_rdm,file=paste0(outputFolder,"/DGE_COMPLETE_withRANDOM_Human_HF_min_pct_0.1_logfc_0.1.xlsx"), colNames = T, rowNames = F)
+```
+
+
+
+```{r}
+#RUN DEG analysis for every celltype MOUSE
+Seu.Obj.Mouse <- subset(Seu.Obj.annotated, subset = species == "Mice")
+
+
+Idents(Seu.Obj.Mouse) <-"disease"
+Mouse_markers_final <- data.frame() # create collector dataframe
+for (celltype in unique(Seu.Obj.Mouse$cell_type)) {
+  print(celltype)
+  Mouse.HF.Seu.celltype = subset(Seu.Obj.Mouse, subset = cell_type == celltype)
+  # running find markers condition specific
+  for (j in unique(Mouse.HF.Seu.celltype$disease)) {
+    ident.1 <- j
+    if (ident.1 == "Hypertrophy") {ident.2 <- "CTRL"} else (ident.2 <- "CTRL")
+    print(ident.1)
+    if (ident.1 != "CTRL" && ident.1 != "CTRL" && celltype != "Unknown") {
+
+    Mouse_Markers <- FindMarkers(object = Mouse.HF.Seu.celltype,
+                                ident.1 = ident.1,
+                                ident.2 = ident.2,
+                                min.pct = 0.1, # 0 GSEA
+                                logfc.threshold = 0.1, # 0 GSEA
+                                assay = "RNA",
+                                only.pos = F,
+                                test.use = "wilcox_limma")
+    
+    Mouse_Markers <- rownames_to_column(Mouse_Markers)
+    Mouse_Markers[["disease"]] <- ident.1
+    Mouse_Markers[["celltype"]] <- celltype
+    Mouse_markers_final <- rbind(Mouse_markers_final, Mouse_Markers)    
+    }
+  }
+}
+Mouse_markers_final <- Mouse_markers_final[Mouse_markers_final$p_val_adj<=0.05,]
+names(Mouse_markers_final)[names(Mouse_markers_final) == "rowname"] <- "gene"
+write.xlsx(Mouse_markers_final,file=paste0(outputFolder,"/DGE_Mouse_HF_min_pct_0.1_logfc_0.1.xlsx"), colNames = T, rowNames = F)
+```
+
