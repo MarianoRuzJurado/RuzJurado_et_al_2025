@@ -1,5 +1,5 @@
 # RuzJurado_et_al_2024
-Code used for R and Python analysis of data presented in ""
+Code used for R and Python analysis of data presented in "Decoding heart failure subtypes with multiclass neural networks to aid biomarker discovery via Shapley value analysis"
 
 # Figure Destinations:
 
