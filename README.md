@@ -3,7 +3,7 @@ Code used for R and Python analysis of data presented in "Decoding heart failure
 
 # Figure Destinations:
 
-Figure1b: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/b210b03f32c61b5d023ff2528188d5cf435e71a3/paper_code/UP_Seurat_preprocess_RuzJurado_et_al_2025.Rmd#L299
+Figure1b: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/b210b03f32c61b5d023ff2528188d5cf435e71a3/paper_code/UP_Seurat_preprocess_RuzJurado_et_al_2024.Rmd#L299
 Figure1c: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/857bf77f4ed498fd1a6cf7b60f7b62e6bd0c0c72/paper_code/scanpy_dotplot.py#L57
 Figure1d: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/b210b03f32c61b5d023ff2528188d5cf435e71a3/paper_code/UP_Seurat_preprocess_RuzJurado_et_al_2024.Rmd#L303
 Figure1e: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2024/blob/857bf77f4ed498fd1a6cf7b60f7b62e6bd0c0c72/paper_code/scanpy_dotplot.py#L133
