@@ -7,7 +7,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-#1. Real run LGR model for each of the three big groups ( species, disease, cell type)
+#1. Run LGR model for each of the three big groups ( species, disease, cell type)
 ```{r}
 
 library(glmnet)
@@ -49,7 +49,7 @@ table(celltype_label_num)
 table(disease_label_num)
 
 
-####Testing why hfref so badly performances
+####Testing for hfref performances
 #train_data sub by HFrEF and HFpEF
 dis_sub <- c("HFrEF")
 index <- which(disease_label %in% dis_sub)
@@ -59,12 +59,12 @@ train_data_sub <- train_data[index,]
 nrow(train_data_sub)
 
 model_dis <- glmnet(
-  x = train_data_sub,  # Input features
+  x = train_data_sub,  
   y = disease_label_sub,             # Target labels disease
   family = "multinomial",            # Specify multinomial logistic regression
   alpha = 0.5,                       # Elastic net mixing parameter (0 = l2, 1 = l1)
-  lambda = 0.1,                      # Regularization strength, I assume now 0.1 as a default
-  standardize = F                 # Standardize features
+  lambda = 0.1,                      # Regularization strength
+  standardize = F                 
 )
 
 predict_dis <- predict(model_dis, test_data, type = "class")
@@ -84,30 +84,30 @@ colnames(matrix_tmp) <- c("NO/YES", "AS", "HFrEF", "HFpEF", "CTRL")
 
 # Standardize the features and fit the model
 model_spec <- glmnet(
-  x = train_data,  # Input features
+  x = train_data,  
   y = species_label_num,             # Target labels species
   family = "multinomial",            # Specify multinomial logistic regression
   alpha = 0.5,                       # Elastic net mixing parameter (0 = l2, 1 = l1)
-  lambda = 0.1,                      # Regularization strength, I assume now 0.1 as a default
-  standardize = F                 # Standardize features
+  lambda = 0.1,                      # Regularization strength
+  standardize = F                 
 )
 
 model_cell <- glmnet(
-  x = train_data,  # Input features
-  y = celltype_label_num,             # Target labels cell type
+  x = train_data,  
+  y = celltype_label_num,            # Target labels cell type
   family = "multinomial",            # Specify multinomial logistic regression
   alpha = 0.5,                       # Elastic net mixing parameter (0 = l2, 1 = l1)
-  lambda = 0.1,                      # Regularization strength, I assume now 0.1 as a default
-  standardize = F                 # Standardize features
+  lambda = 0.1,                      # Regularization strength
+  standardize = F                 
 )
 
 model_dis <- glmnet(
-  x = train_data,  # Input features
+  x = train_data,  
   y = disease_label_num,             # Target labels disease
   family = "multinomial",            # Specify multinomial logistic regression
   alpha = 0.5,                       # Elastic net mixing parameter (0 = l2, 1 = l1)
-  lambda = 0.1,                      # Regularization strength, I assume now 0.1 as a default
-  standardize = F                 # Standardize features
+  lambda = 0.1,                      # Regularization strength
+  standardize = F                 
 )
 
 
@@ -127,9 +127,9 @@ predict_dis <- predict(model_dis, test_data, type = "class")
 # Redefine the one hot encoded representation
 spec_labels = c('Human', 'Mice')
 celltype_labels = c('Cardiomyocytes', 'Endothelial', 'Fibroblasts', 'Immune.cells', 'Neuro', 'Pericytes','Smooth.Muscle')
-disease_labels = c('AS', 'HFpEF', 'HFrEF', 'CTRL') # Assumption of same order in ground truth as always
+disease_labels = c('AS', 'HFpEF', 'HFrEF', 'CTRL') #same order in ground truth as always
 
-#map the nhames back to the original label names
+#map the names back to the original label names
 predict_spec_nam <- factor(predict_spec, levels = c(1,2), labels = c("Human","Mice"))
 predict_cell_nam <- factor(predict_cell, levels = c(1,2,3,4,5,6,7), labels = c("Cardiomyocytes","Endothelial","Fibroblasts",
                                                                                "Immune.cells","Neuro","Pericytes",
@@ -138,14 +138,13 @@ predict_dis_nam <- factor(predict_dis, levels = c(1,2,3,4), labels = c("AS","CTR
 
 one_hot_matrix <- matrix(0, nrow = length(predict_spec_nam), ncol = 13)
 
-# Assign column names to the one-hot matrix
+#assign column names to the one-hot matrix
 colnames(one_hot_matrix) <- test_labels
 
-# Fill the matrix with 1s where appropriate Species
+#filling the matrix with 1s where appropriate Species
 for (i in 1:length(predict_spec_nam)) {
   label <- predict_spec_nam[i]
   
-  # Check for each category in the test_labels
   for (j in 1:length(test_labels)) {
     if (grepl(test_labels[j], label)) {
       one_hot_matrix[i, j] <- 1
@@ -153,11 +152,9 @@ for (i in 1:length(predict_spec_nam)) {
   }
 }
 
-# Fill the matrix with 1s where appropriate Cell type
 for (i in 1:length(predict_cell_nam)) {
   label <- predict_cell_nam[i]
   
-  # Check for each category in the test_labels
   for (j in 1:length(test_labels)) {
     if (grepl(test_labels[j], label)) {
       one_hot_matrix[i, j] <- 1
@@ -165,11 +162,9 @@ for (i in 1:length(predict_cell_nam)) {
   }
 }
 
-# Fill the matrix with 1s where appropriate Disease
 for (i in 1:length(predict_dis_nam)) {
   label <- predict_dis_nam[i]
   
-  # Check for each category in the test_labels
   for (j in 1:length(test_labels)) {
     if (grepl(test_labels[j], label)) {
       one_hot_matrix[i, j] <- 1
@@ -177,7 +172,7 @@ for (i in 1:length(predict_dis_nam)) {
   }
 }
 
-# Convert to a data frame for easier viewing
+#convert to a data frame for easier viewing
 one_hot_df <- as.data.frame(one_hot_matrix)
 
 write.csv(one_hot_df, "/media/Helios_scStorage/Mariano/NN_Human_Mice/multinomial_logistic_regression_model/new_run_3_major_class/one_hot_encoded_predictions_test_data_LR_multinomial.csv", row.names = F)
