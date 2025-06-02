@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse, sys
-from utils import *
+from UP_utils import *
 from keras.callbacks import ReduceLROnPlateau
 from keras.callbacks import EarlyStopping
 from keras_tuner import Hyperband
-from models_hypertuning import DEAutoencoder_builder
+from UP_models_hypertuning import DEAutoencoder_builder
 
 # Define the file path for your log file
 log_file_path = '/media/Helios_scStorage/Mariano/NN_Human_Mice/hypertuning_human_model/local_run/240705.log'
