@@ -1,7 +1,7 @@
 import pandas as pd
 import tensorflow as tf
 from sklearn.preprocessing import MultiLabelBinarizer
-from utils import get_time
+from UP_utils import get_time
 
 
 def MultiLabelBin(label_path):
