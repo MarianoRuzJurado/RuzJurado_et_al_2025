@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse, sys
-from utils import *
+from UP_utils import *
 from keras.callbacks import ReduceLROnPlateau
 from keras.callbacks import EarlyStopping
 from keras_tuner import Hyperband, Objective
-from models_hypertuning import MLP_Model_builder
-from preprocess import MultiLabelBin
+from UP_models_hypertuning import MLP_Model_builder
+from UP_preprocess import MultiLabelBin
 
 # Define the file path for your log file
 log_file_path = '/media/Helios_scStorage/Mariano/NN_Human_Mice/hypertuning/local_run/MLP_240620_3_500ep.log'
