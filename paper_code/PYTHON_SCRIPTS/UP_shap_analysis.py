@@ -3,8 +3,8 @@ import pandas as pd
 
 # import polars as pl
 import pickle
-from utils import *
-from models import MLP_Model
+from UP_utils import *
+from UP_models import MLP_Model
 import matplotlib
 import matplotlib.pyplot as plt
 from scipy.sparse import csr_matrix
