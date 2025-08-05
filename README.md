@@ -1,6 +1,9 @@
 # RuzJurado_et_al_2025
 Code used for R and Python analysis of data presented in "Decoding heart failure subtypes with neural networks via differential explanation analysis"
 
+Data sets and their labels for training, validation and testing can be found in this repository [CVD_dataset](https://huggingface.co/datasets/mruzjurado/CVD_dataset)
+
+
 # Figure Destinations:
 
 Figure1b: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510ae9d4e13e61edf1bd5af6d8b4bcd8314/paper_code/R_SCRIPTS/UP_Seurat_preprocess_RuzJurado_et_al_2024.Rmd#L299
