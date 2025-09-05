@@ -15,7 +15,7 @@ Figure2a: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510
 Figure2b: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510ae9d4e13e61edf1bd5af6d8b4bcd8314/paper_code/PYTHON_SCRIPTS/UP_Hypertuning_analysis.py#L445
 Figure2c: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510ae9d4e13e61edf1bd5af6d8b4bcd8314/paper_code/PYTHON_SCRIPTS/UP_main.py#L240
 Figure2d: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510ae9d4e13e61edf1bd5af6d8b4bcd8314/paper_code/PYTHON_SCRIPTS/UP_main.py#L268
-Figure2e: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510ae9d4e13e61edf1bd5af6d8b4bcd8314/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L84
+Figure2e: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/cb829f13acbf1b90d015cd8b21920d32eebb3f08/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L1611
 Figure2f: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510ae9d4e13e61edf1bd5af6d8b4bcd8314/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L146
 
 Figure3b: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510ae9d4e13e61edf1bd5af6d8b4bcd8314/paper_code/PYTHON_SCRIPTS/UP_shap_analysis.py#L73
@@ -43,12 +43,18 @@ Figure4f: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510
 
 Extended Data Figure 1a&b: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510ae9d4e13e61edf1bd5af6d8b4bcd8314/paper_code/R_SCRIPTS/UP_Seurat_preprocess_RuzJurado_et_al_2024.Rmd#L370
 
-Extended Data Figure 2a: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510ae9d4e13e61edf1bd5af6d8b4bcd8314/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L521
-Extended Data Figure 2b: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510ae9d4e13e61edf1bd5af6d8b4bcd8314/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L383
-Extended Data Figure 2c: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/a1d5ca014236d8b7b2f5982218207bd2aab89a4e/paper_code/R_SCRIPTS/UP_Seurat_preprocess_RuzJurado_et_al_2024.Rmd#L308
-Extended Data Figure 2d: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510ae9d4e13e61edf1bd5af6d8b4bcd8314/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L268
-Extended Data Figure 2e: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510ae9d4e13e61edf1bd5af6d8b4bcd8314/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L204
-Extended Data Figure 2f: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510ae9d4e13e61edf1bd5af6d8b4bcd8314/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L327
+Extended Data Figure 2a: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/cb829f13acbf1b90d015cd8b21920d32eebb3f08/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L204
+Extended Data Figure 2b: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/cb829f13acbf1b90d015cd8b21920d32eebb3f08/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L383
+Extended Data Figure 2c: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/cb829f13acbf1b90d015cd8b21920d32eebb3f08/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L1526
+Extended Data Figure 2d: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/cb829f13acbf1b90d015cd8b21920d32eebb3f08/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L1024
+Extended Data Figure 2e: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/cb829f13acbf1b90d015cd8b21920d32eebb3f08/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L84
+Extended Data Figure 2f: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/cb829f13acbf1b90d015cd8b21920d32eebb3f08/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L268
+Extended Data Figure 2g: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/cb829f13acbf1b90d015cd8b21920d32eebb3f08/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L1411
+Extended Data Figure 2h: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/cb829f13acbf1b90d015cd8b21920d32eebb3f08/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L909
+Extended Data Figure 2i: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/cb829f13acbf1b90d015cd8b21920d32eebb3f08/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L146
+Extended Data Figure 2j: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/cb829f13acbf1b90d015cd8b21920d32eebb3f08/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L327
+Extended Data Figure 2k: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/cb829f13acbf1b90d015cd8b21920d32eebb3f08/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L1470
+Extended Data Figure 2l: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/cb829f13acbf1b90d015cd8b21920d32eebb3f08/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L968
 
 Extended Data Figure 3: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510ae9d4e13e61edf1bd5af6d8b4bcd8314/paper_code/R_SCRIPTS/UP_Seurat_preprocess_RuzJurado_et_al_2024.Rmd#L321
 
@@ -71,3 +77,8 @@ Extended Data Figure 6d: https://github.com/MarianoRuzJurado/RuzJurado_et_al_202
 Extended Data Figure 6e: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510ae9d4e13e61edf1bd5af6d8b4bcd8314/paper_code/R_SCRIPTS/UP_predictors_expression_RuzJurado_et_al_2024.Rmd#L260
 Extended Data Figure 6f: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/23b58510ae9d4e13e61edf1bd5af6d8b4bcd8314/paper_code/R_SCRIPTS/UP_predictors_expression_RuzJurado_et_al_2024.Rmd#L211
 
+Extended Data Figure 7a: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/cb829f13acbf1b90d015cd8b21920d32eebb3f08/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L1278
+Extended Data Figure 7b: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/cb829f13acbf1b90d015cd8b21920d32eebb3f08/paper_code/R_SCRIPTS/UP_confusion_matrix_RuzJurado_et_al_2024.Rmd#L1337
+Extended Data Figure 7c: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/b083bb188d99593fc81e9e8bb89be0e84d6a45db/paper_code/PYTHON_SCRIPTS/UP_shap_analysis_koenig.py#L74
+Extended Data Figure 7d&e: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/b083bb188d99593fc81e9e8bb89be0e84d6a45db/paper_code/R_SCRIPTS/UP_koenig_et_al_2022.Rmd#L349
+Extended Data Figure 7f: https://github.com/MarianoRuzJurado/RuzJurado_et_al_2025/blob/b083bb188d99593fc81e9e8bb89be0e84d6a45db/paper_code/R_SCRIPTS/UP_koenig_et_al_2022.Rmd#L398
