@@ -1,0 +1,456 @@
+---
+title: "UP_Koenig"
+author: "Mariano Ruz Jurado"
+date: "2025-08-15"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+#0. Load essential libraries
+```{r Loading essential libraries, results='hide', message=FALSE}
+#load libraries
+library(Seurat)
+library(tidyverse)
+library(ggplot2)
+library(ggpubr)
+library(openxlsx)
+source("/mnt/mariano/ZMM_shared/Bioinformatic/scRNA-SEQ-ZMM/Import10X-HelperFunctions_SeuratV3.R")
+outputFolder <- "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/"
+```
+
+#1. Load object
+```{r}
+load("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/GSE183852_DCM_Nuclei.Robj")
+
+DefaultAssay(nuclei) <- "RNA"
+table(nuclei$Names)
+sample_dis_table <- table(nuclei$orig.ident, nuclei$Condition)
+
+# we dont need all of the healthy samples...
+dcm_total <- sum(sample_dis_table[,1])
+healthy_total <- sum(sample_dis_table[,2])
+```
+
+
+#2. subset biological replicates for the same amount across disease
+
+```{r}
+DCM_patients <- c(
+  "H_ZC-LVAD","TWCM-10-5","TWCM-11-3", "TWCM-13-102", "TWCM-13-17",
+  "TWCM-13-181","TWCM-13-208","TWCM-13-285","TWCM-13-47","TWCM-13-84",
+  "TWCM-LVAD2","TWCM-LVAD3","TWCM-11-93"
+)
+
+healthy_patients <- c(
+  "H_ZC-11-292","TWCM-10-68","TWCM-11-103", "TWCM-11-104", "TWCM-11-192",
+  "TWCM-11-256","TWCM-11-264","TWCM-11-41","TWCM-11-42","TWCM-11-74",
+  "TWCM-11-82","TWCM-13-132","TWCM-13-80"
+)
+
+
+final_samples <- c(DCM_patients, healthy_patients)
+seurat_downsample <- subset(nuclei, orig.ident %in% final_samples)
+
+table(seurat_downsample$orig.ident, seurat_downsample$Condition)
+
+seurat_downsample$cell_type <- plyr::revalue(as.vector(seurat_downsample$Names), c(`B_Cells` = "Immune.cells",
+                                                                    `Monocytes` = "Immune.cells",
+                                                                    `Macrophages` = "Immune.cells",
+                                                                    `Mast_Cells` = "Immune.cells",
+                                                                    `T/NK_Cells` = "Immune.cells",
+                                                                    `Neurons` = "Neuro",
+                                                                    `Endothelium` = "Endothelial",
+                                                                    `Endocardium` = "Endothelial",
+                                                                    `Smooth_Muscle` = "Smooth.Muscle"))
+
+#subset by known cell types in the model
+trained_cells <- c("Cardiomyocytes", "Endothelial", "Fibroblasts", "Immune.cells", "Neuro", "Pericytes", "Smooth.Muscle")
+seu_koenig <- subset(seurat_downsample, cell_type %in% trained_cells)
+
+#apply our thresholds for quality control
+
+
+#Filter by same values
+minFeatures=300
+maxFeatures=6000
+minCounts=500
+maxCounts=15000
+maxMito=5
+
+minCells = 5
+keep_features <- rowSums(seu_koenig[["RNA"]]$counts > 0) >= minCells
+seu_koenig <- subset(seu_koenig, features = rownames(seu_koenig)[keep_features])
+seu_koenig <- subset(x = seu_koenig, subset = nFeature_RNA > minFeatures & nFeature_RNA < maxFeatures & nCount_RNA > minCounts & nCount_RNA < maxCounts & percent.mito < maxMito)
+
+seu_koenig <- NormalizeData(seu_koenig)
+
+
+saveRDS(seu_koenig, "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/seu_nuclei_preprocessed_Try2_all_genes_12_samples.rds")
+
+
+#Adjust labels of disease to fit predictor disease classes in model: ICM -> HFrEF, NF -> Healthy
+seu_koenig$disease_train <- plyr::revalue(as.vector(seu_koenig$Condition), c(`DCM` = "HFrEF", `Donor` = "CTRL")) 
+
+seu_koenig$condition <- paste("Human", seu_koenig@meta.data$disease_train, sep = "-")
+meta.data <- seu_koenig@meta.data
+sparse.matrix <- seu_koenig@assays$RNA$data
+dense.matrix <- as.matrix(sparse.matrix)
+dense.matrix <- t(dense.matrix)
+
+label_list <- paste(seu_koenig@meta.data$condition, seu_koenig@meta.data$cell_type, sep = "_")
+
+# Save the test set
+# write.table(as.data.frame(dense.matrix), file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/250819_koenig_set.csv", sep = ",", col.names = T, row.names = T)
+# 
+# write.csv(label_list, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/250819_koenig_labels.csv", row.names = FALSE)
+```
+
+
+
+#3. Extracting normalized expression data for machine learning training for train, val data
+
+```{r}
+seu_koenig <- readRDS("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/seu_nuclei_preprocessed_Try2_all_genes_12_samples.rds")
+
+seu_koenig$disease_train <- plyr::revalue(as.vector(seu_koenig$Condition), c(`DCM` = "HFrEF", `Donor` = "CTRL")) 
+
+seu_koenig$condition <- paste("Human", seu_koenig@meta.data$disease_train, sep = "-")
+
+Idents(seu_koenig) <- "orig.ident"
+biosample_id <- levels(Idents(seu_koenig))
+#get the subset obj
+Seu.Obj <- subset(seu_koenig, idents = biosample_id[!biosample_id %in% c("TWCM-13-181","H_ZC-11-292")]) # HFrEF, # Healthy
+
+meta.data <- Seu.Obj@meta.data
+sparse.matrix <- Seu.Obj@assays$RNA$data
+dense.matrix <- as.matrix(sparse.matrix)
+dense.matrix <- t(dense.matrix)
+
+
+#Create stratified Training and Testing set
+library(caret)
+
+label_list <- paste(Seu.Obj@meta.data$condition,
+                    Seu.Obj@meta.data$cell_type, sep = "_")
+
+
+
+# Create a stratified partition of the data
+set.seed(123)  # for reproducibility
+trainIndex <- createDataPartition(label_list, p = 0.80, list = FALSE)
+
+# Split the data into training and test sets
+train_set <- dense.matrix[trainIndex,]
+val_set <- dense.matrix[-trainIndex,]
+
+# Save the training set
+write.table(as.data.frame(train_set), file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/250819_koenig_train_set_p_80.csv", sep = ",", col.names = T, row.names = T)
+
+
+#Save test matrix Matrix
+write.table(as.data.frame(val_set), file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/250819_koenig_val_set_p_20.csv", sep = ",", col.names = T, row.names = T)
+
+
+
+# create a list of labels for training data, save as csv for python import
+
+label_list.train <- character()
+pb = txtProgressBar(min = 0, max = length(rownames(train_set)), initial = 0)
+for (i in 1:length(rownames(train_set))){
+    setTxtProgressBar(pb, i)
+    barcode <- rownames(train_set)[i]
+    condition <- Seu.Obj@meta.data[barcode,]$condition
+    cell_type <- Seu.Obj@meta.data[barcode,]$cell_type
+    label_list.train[i] <- paste0(condition,"_",cell_type)
+}
+close(pb)
+
+write.csv(label_list.train, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/250819_koenig_train_set_label_p_80.csv", row.names = FALSE)
+
+# Write Ground Truth Training barcode, label
+df.train <- data.frame(barcodes=rownames(train_set),label_list.train)
+openxlsx::write.xlsx(df.train, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/Ground_Truth_DF_Training.xlsx")
+
+#create a list of labels for my training data, save as csv for python import
+
+label_list.val <- character()
+pb = txtProgressBar(min = 0, max = length(rownames(val_set)), initial = 0)
+for (i in 1:length(rownames(val_set))){
+    setTxtProgressBar(pb, i)
+    barcode <- rownames(val_set)[i]
+    condition <- Seu.Obj@meta.data[barcode,]$condition
+    cell_type <- Seu.Obj@meta.data[barcode,]$cell_type
+    label_list.val[i] <- paste0(condition,"_",cell_type)
+}
+close(pb)
+
+write.csv(label_list.val, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/250819_koenig_val_set_label_p_20.csv", row.names = FALSE)
+
+#Write Ground Truth val barcode, label
+df.val <- data.frame(barcodes=rownames(val_set),label_list.val)
+openxlsx::write.xlsx(df.val, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/Ground_Truth_DF_Val.xlsx")
+
+```
+
+## 3.1 Shuffle randomly Data tables (Good practice for better training)
+
+```{r}
+#Load the data sets
+train_set <- read.delim(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/250819_koenig_train_set_p_80.csv", header= TRUE, sep = ",")
+val_set <- read.delim(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/250819_koenig_val_set_p_20.csv", header= TRUE, sep = ",")
+
+#Load the labels
+train_labels <- read.delim(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/250819_koenig_train_set_label_p_80.csv", sep = ",")
+val_labels <- read.delim(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/250819_koenig_val_set_label_p_20.csv", sep = ",")
+
+
+#Create randomness in data
+set.seed(123) # reproducibility
+shuffled_numbers <- sample(nrow(train_set))
+
+#shuffle the frame and labels
+shuffled_train_set <- train_set[shuffled_numbers,]
+shuffled_train_labels <- as.data.frame(train_labels[shuffled_numbers,])
+
+#check if labels are still correctly assigned, lets check 6 random rows
+random_rows <- c(rownames(shuffled_train_set)[1],
+  rownames(shuffled_train_set)[11],
+  rownames(shuffled_train_set)[111],
+  rownames(shuffled_train_set)[1111],
+  rownames(shuffled_train_set)[11111],
+  rownames(shuffled_train_set)[111111])
+
+#Check if label correct
+for (rwnm in random_rows) {
+  nbr <- which(rownames(shuffled_train_set) == rwnm)
+  label_name <- shuffled_train_labels[nbr,]
+  nbr_truth <- which(rownames(train_set) == rwnm)
+  truth_label_name <- train_labels[nbr_truth,]
+
+  if (label_name == truth_label_name) {
+    print(paste0(label_name, " is identical to ", truth_label_name, ", labels identical for the selected random row"))
+  }
+
+  if (label_name != truth_label_name) {
+    print(paste0(label_name, " is NOT identical to ", truth_label_name, ", labels NOT identical for the selected random row"))
+  }
+}
+
+#if everything is fine save as randomized sample set
+write.table(shuffled_train_set, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/RANDOMIZED_250819_koenig_train_set_p_80.csv", sep = ",", col.names = T, row.names = T)
+
+write.csv(shuffled_train_labels, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/RANDOMIZED_250819_koenig_train_set_label_p_80.csv", row.names = FALSE)
+
+
+#Now repeat for validation data set
+
+#Create randomness in data
+set.seed(123) # reproducibility
+shuffled_numbers <- sample(nrow(val_set))
+
+#shuffle the frame and labels
+shuffled_val_set <- val_set[shuffled_numbers,]
+shuffled_val_labels <- as.data.frame(val_labels[shuffled_numbers,])
+
+#check if labels are still correctly assigned, lets check 6 random rows
+random_rows <- c(rownames(shuffled_val_set)[1],
+  rownames(shuffled_val_set)[11],
+  rownames(shuffled_val_set)[111],
+  rownames(shuffled_val_set)[1111],
+  rownames(shuffled_val_set)[11111],
+  rownames(shuffled_val_set)[44972])
+
+#Check if label correct
+for (rwnm in random_rows) {
+  nbr <- which(rownames(shuffled_val_set) == rwnm)
+  label_name <- shuffled_val_labels[nbr,]
+  nbr_truth <- which(rownames(val_set) == rwnm)
+  truth_label_name <- val_labels[nbr_truth,]
+
+  if (label_name == truth_label_name) {
+    print(paste0(label_name, " is identical to ", truth_label_name, ", labels identical for the selected random row"))
+  }
+
+  if (label_name != truth_label_name) {
+    print(paste0(label_name, " is NOT identical to ", truth_label_name, ", labels NOT identical for the selected random row"))
+  }
+}
+
+#if everything is fine save as randomized sample set
+write.table(shuffled_val_set, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/RANDOMIZED_250819_koenig_val_set_p_20.csv", sep = ",", col.names = T, row.names = T)
+
+write.csv(shuffled_val_labels, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/RANDOMIZED_250819_koenig_val_set_label_p_20.csv", row.names = FALSE)
+```
+
+##3.2 Extracting normalized expression data for machine learning training for test data
+
+```{r}
+
+### Create set for testing, best quality samples
+Idents(seu_koenig) <- "orig.ident"
+biosample_id <- levels(Idents(seu_koenig))
+#get the subset obj
+Seu.Obj.test <- subset(seu_koenig, idents = biosample_id[biosample_id %in% c("TWCM-13-181","H_ZC-11-292")]) # HFrEF, # Healthy
+
+
+meta.data <- Seu.Obj.test@meta.data
+sparse.matrix <- Seu.Obj.test@assays$RNA$data
+dense.matrix <- as.matrix(sparse.matrix)
+dense.matrix <- t(dense.matrix)
+
+label_list <- paste(Seu.Obj.test@meta.data$condition, Seu.Obj.test@meta.data$cell_type, sep = "_")
+
+# Save the test set
+write.table(as.data.frame(dense.matrix), file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/250819_koenig_test_set.csv", sep = ",", col.names = T, row.names = T)
+
+write.csv(label_list, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/250819_koenig_test_set_label.csv", row.names = FALSE)
+```
+
+##3.3 Extracting normalized expression data for SHAP value calculation 200 cells per orig.ident & cell type (or everything of less)
+
+```{r}
+library(Seurat)
+library(dplyr)
+
+meta.data <-seu_koenig@meta.data %>%
+  tibble::rownames_to_column(var="cell_id")
+
+sampled_cells <- meta.data %>%
+  dplyr::group_by(orig.ident, cell_type) %>%
+  sample_n(size = min(25, n()), replace = FALSE) %>%
+  pull(cell_id)
+
+# Subset the Seurat object to keep only the selected cells
+seurat_subset <- subset(seu_koenig, cells = sampled_cells)
+
+
+seurat_subset$disease_train <- plyr::revalue(as.vector(seurat_subset$Condition), c(`DCM` = "HFrEF", `Donor` = "CTRL")) 
+
+seurat_subset$condition <- paste("Human", seurat_subset@meta.data$disease_train, sep = "-")
+
+# Check the distribution after subsetting
+table(seurat_subset$orig.ident, seurat_subset$cell_type)
+table(seurat_subset$cell_type)
+
+meta.data <- seurat_subset@meta.data
+sparse.matrix <- seurat_subset@assays$RNA@data
+dense.matrix <- as.matrix(sparse.matrix)
+dense.matrix <- t(dense.matrix)
+
+label_list <- paste(seurat_subset@meta.data$condition, seurat_subset@meta.data$cell_type, sep = "_")
+
+# Save the test set
+write.table(as.data.frame(dense.matrix), file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/250820_SHAP_set_koenig_balanced_25.csv", sep = ",", col.names = T, row.names = T)
+
+write.csv(label_list, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/250820_SHAP_set_koenig_balanced_25_labels.csv", row.names = FALSE)
+```
+
+#4. DEG vs DXG koenig list apply common thresholds
+```{r}
+koenig_DEG <- read.xlsx("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/44161_2022_28_MOESM4_ESM.xlsx", sheet = 2) # 1 CM, 2 EC 
+
+koenig_DEG <- koenig_DEG[abs(koenig_DEG$log2FoldChange) > 0.1 & koenig_DEG$padj < 0.05,]
+koenig_DEG <- koenig_DEG[!is.na(koenig_DEG$padj),]
+write.xlsx(koenig_DEG, "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/filtered_44161_2022_28_MOESM4_ESM_EC.xlsx")
+
+```
+
+##4.1 GO analysis DXG and DEGs
+```{r}
+library(DOtools)
+library(enrichR)
+
+#Load df with DGE analysis results
+konig_DGE <- read.xlsx("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/filtered_44161_2022_28_MOESM4_ESM_CM.xlsx")
+XAI_DGE <- read.xlsx("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/shap_set/background_200/t_test_on_class_11_Human_Cardiomyocytes_HFrEF_Human_Cardiomyocytes_CTRL.xlsx")
+
+
+#get unique Genes in XAI
+XAI_DGE_Unique <- XAI_DGE[!XAI_DGE$Feature %in% konig_DGE$Gene,]
+
+write.xlsx(XAI_DGE_Unique, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/GO_analysis/CM/XAI_CM_DGE_unique_koenig.xlsx")
+
+
+#get unique Genes in koenig
+konig_DGE_Unique <- konig_DGE[!konig_DGE$Gene %in% XAI_DGE$Feature,]
+
+write.xlsx(konig_DGE_Unique, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/GO_analysis/CM/Seu_Koenig_CM_DGE_unique_koenig.xlsx")
+
+#enriched XAI
+result_Meta_UP <- read.xlsx("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/GO_analysis/CM/UP_XAI_CM_GO_koenig.xlsx", sheet = "Enrichment")
+result_Meta_UP$celltype <- "Cardiomyocytes"
+result_Meta_UP <- result_Meta_UP[result_Meta_UP$GroupID %in% grepv("Summary", result_Meta_UP$GroupID),]
+result_Meta_UP$State <- "enriched"
+#depleted XAI
+result_Meta_DOWN <- read.xlsx("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/GO_analysis/CM/DOWN_XAI_CM_GO_koenig.xlsx", sheet = "Enrichment")
+result_Meta_DOWN$celltype <- "Cardiomyocytes"
+result_Meta_DOWN <- result_Meta_DOWN[result_Meta_DOWN$GroupID %in% grepv("Summary", result_Meta_DOWN$GroupID),]
+result_Meta_DOWN$State <- "depleted"
+
+#XAI plot
+result_Meta_comb <- rbind(result_Meta_UP, result_Meta_DOWN)
+result_Meta_comb$LogP <- result_Meta_comb$LogP*(-1)
+
+write.xlsx(result_Meta_comb, "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/GO_analysis/CM/GO_Tables/GO_XAI_DGE_Unique_CM_koenig.xlsx")
+
+# result_GO <- result_GO[result_GO$Adjusted.P.value < 0.05,]
+DO.SplitBarGSEA(df_GSEA = result_Meta_comb,
+               term_col = "Description",
+               col_split = "LogP",
+               cond_col = "State",
+               pos_cond = "enriched",
+               cutoff = 40,
+               log10_transform = TRUE,
+               figsize = c(15, 10), #12,8
+               topN = 15,
+               colors_pairs = c("royalblue", "sandybrown"),
+               alpha_colors = 0.3,
+               path = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/GO_analysis/CM/",
+               spacing = 5,
+               txt_size = 12,
+               filename = "SplitBar.svg",
+               title = "Top 10 upregulated DXG GO Terms in CM: ",
+               showP = FALSE,
+               celltype = "Cardiomyocytes")
+
+
+#### koenig DGE
+result_Meta_UP <- read.xlsx("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/GO_analysis/CM/UP_Seu_koenig_CM_GO_koenig.xlsx", sheet = "Enrichment")
+result_Meta_UP$celltype <- "Cardiomyocytes"
+result_Meta_UP <- result_Meta_UP[result_Meta_UP$GroupID %in% grepv("Summary", result_Meta_UP$GroupID),]
+result_Meta_UP$State <- "enriched"
+#depleted koenig DGE
+result_Meta_DOWN <- read.xlsx("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/GO_analysis/CM/DOWN_Seu_koenig_CM_GO_koenig.xlsx", sheet = "Enrichment")
+result_Meta_DOWN$celltype <- "Cardiomyocytes"
+result_Meta_DOWN <- result_Meta_DOWN[result_Meta_DOWN$GroupID %in% grepv("Summary", result_Meta_DOWN$GroupID),]
+result_Meta_DOWN$State <- "depleted"
+
+#koenig DGE plot
+result_Meta_comb <- rbind(result_Meta_UP, result_Meta_DOWN)
+result_Meta_comb$LogP <- result_Meta_comb$LogP*(-1)
+
+write.xlsx(result_Meta_comb, "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/GO_analysis/CM/GO_Tables/GO_keonig_DGE_Unique_CM_koenig.xlsx")
+
+# result_GO <- result_GO[result_GO$Adjusted.P.value < 0.05,]
+DO.SplitBarGSEA(df_GSEA = result_Meta_comb,
+               term_col = "Description",
+               col_split = "LogP",
+               cond_col = "State",
+               pos_cond = "enriched",
+               cutoff = 40,
+               log10_transform = TRUE,
+               figsize = c(15, 10), #12,8
+               topN = 15,
+               colors_pairs = c("royalblue", "sandybrown"),
+               alpha_colors = 0.3,
+               path = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/GO_analysis/CM/",
+               spacing = 5,
+               txt_size = 12,
+               filename = "SplitBar.svg",
+               title = "Top 10 upregulated GO Terms in CM: ",
+               showP = FALSE,
+               celltype = "Cardiomyocytes")
+
+```
+

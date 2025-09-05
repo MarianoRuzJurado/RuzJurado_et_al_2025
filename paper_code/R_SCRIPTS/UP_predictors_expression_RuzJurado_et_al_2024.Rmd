@@ -24,7 +24,7 @@ sink(file = paste0(outputFolder,"/NN_Paper_Script.log"), append = TRUE, split = 
 #1. Load Seurat object containing HF expression data
 ```{r}
 # load object
-Seu.Obj.annotated <- readRDS(file = "/media/Helios_scStorage/Mariano/Human_Mice_Comparison/Human_Mice_Integrated/Seurat_and_R_objects/SeuratObject.combined.integrated.annotated_10_08_22.rds")
+Seu.Obj.annotated <- readRDS(file = "/mnt/mariano/scStorage/Mariano/Human_Mice_Comparison/Human_Mice_Integrated/Seurat_and_R_objects/SeuratObject.combined.integrated.annotated_10_08_22.rds")
 DefaultAssay(object = Seu.Obj.annotated) <- "RNA"
 
 ```
@@ -701,6 +701,96 @@ for (method in test.xai) {
   }
 }  
 ```
+
+
+##7.3 XAI GO analysis with unique DGE XAI in Human CM HFpEF 
+```{r}
+library(DOtools)
+library(enrichR)
+
+#Load df with DGE analysis results
+Seu_DGE <- read.xlsx("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/Paper_R_code/excelsheets/Seurat_DGE/DGE_COMPLETE_withRANDOM_Human_HF_min_pct_0.1_logfc_0.1.xlsx")
+XAI_DGE <- read.xlsx("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/Storage_backup/anndata_shap/Z_SHAP/background_200_balanced_data/DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5_avgExp_0.1_p_0.05/Human_DGE_XAI_analysis_SHAP_tresh_0.1_log_0.5_avgExp_0.1_p_0.05/t_test_on_class_10_Human_Cardiomyocytes_HFpEF_Human_Cardiomyocytes_CTRL.xlsx")
+
+#subset by relevant comparison
+Seu_DGE_CM_HFpEF <- Seu_DGE[Seu_DGE$celltype == "Cardiomyocytes" & Seu_DGE$disease == "HFpEF" & Seu_DGE$testmethod == "wilcox",]
+
+#get unique Genes in XAI
+XAI_DGE_Unique <- XAI_DGE[!XAI_DGE$Feature %in% Seu_DGE_CM_HFpEF$gene,]
+
+#enriched
+result_Meta_UP <- read.xlsx("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_4b_uniqueGO_XAI/UP_metascape_XAI_DGE_unique_Human_CM_HFpEF.xlsx", sheet = "Enrichment")
+result_Meta_UP$celltype <- "Cardiomyocytes"
+result_Meta_UP <- result_Meta_UP[result_Meta_UP$GroupID %in% grepv("Summary", result_Meta_UP$GroupID),]
+result_Meta_UP$State <- "enriched"
+#depleted
+result_Meta_DOWN <- read.xlsx("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_4b_uniqueGO_XAI/DOWN_metascape_XAI_DGE_unique_Human_CM_HFpEF.xlsx", sheet = "Enrichment")
+result_Meta_DOWN$celltype <- "Cardiomyocytes"
+result_Meta_DOWN <- result_Meta_DOWN[result_Meta_DOWN$GroupID %in% grepv("Summary", result_Meta_DOWN$GroupID),]
+result_Meta_DOWN$State <- "depleted"
+
+result_Meta_comb <- rbind(result_Meta_UP, result_Meta_DOWN)
+result_Meta_comb$LogP <- result_Meta_comb$LogP*(-1)
+# result_GO <- result_GO[result_GO$Adjusted.P.value < 0.05,]
+DO.SplitBarGSEA(df_GSEA = result_Meta_comb,
+               term_col = "Description",
+               col_split = "LogP",
+               cond_col = "State",
+               pos_cond = "enriched",
+               cutoff = 40,
+               log10_transform = TRUE,
+               figsize = c(15, 10), #12,8
+               topN = 15,
+               colors_pairs = c("royalblue", "sandybrown"),
+               alpha_colors = 0.3,
+               path = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_4b_uniqueGO_XAI/GO_Tables",
+               spacing = 5,
+               txt_size = 12,
+               filename = "SplitBar.svg",
+               title = "Top 10 GO Terms in each Condition: ",
+               showP = FALSE,
+               celltype = "Cardiomyocytes")
+```
+
+##7.4 SEU GO analysis with unique DGE Seu in Human CM HFpEF 
+```{r}
+library(DOtools)
+library(enrichR)
+
+#enriched
+result_Meta_UP <- read.xlsx("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_4b_uniqueGO_XAI/UP_metascape_Seu_DGE_unique_Human_CM_HFpEF.xlsx", sheet = "Enrichment")
+result_Meta_UP$celltype <- "Cardiomyocytes"
+result_Meta_UP <- result_Meta_UP[result_Meta_UP$GroupID %in% grepv("Summary", result_Meta_UP$GroupID),]
+result_Meta_UP$State <- "enriched"
+#depleted
+result_Meta_DOWN <- read.xlsx("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_4b_uniqueGO_XAI/DOWN_metascape_Seu_DGE_unique_Human_CM_HFpEF.xlsx", sheet = "Enrichment")
+result_Meta_DOWN$celltype <- "Cardiomyocytes"
+result_Meta_DOWN <- result_Meta_DOWN[result_Meta_DOWN$GroupID %in% grepv("Summary", result_Meta_DOWN$GroupID),]
+result_Meta_DOWN$State <- "depleted"
+
+result_Meta_comb <- rbind(result_Meta_UP, result_Meta_DOWN)
+result_Meta_comb$LogP <- result_Meta_comb$LogP*(-1)
+# result_GO <- result_GO[result_GO$Adjusted.P.value < 0.05,]
+DO.SplitBarGSEA(df_GSEA = result_Meta_comb,
+               term_col = "Description",
+               col_split = "LogP",
+               cond_col = "State",
+               pos_cond = "enriched",
+               cutoff = 40,
+               log10_transform = TRUE,
+               figsize = c(15, 10), #12,8
+               topN = 15,
+               colors_pairs = c("royalblue", "sandybrown"),
+               alpha_colors = 0.3,
+               path = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_4b_uniqueGO_XAI/GO_Tables",
+               spacing = 5,
+               txt_size = 12,
+               filename = "SplitBar.svg",
+               title = "Top 10 GO Terms Seurat in each Condition: ",
+               showP = FALSE,
+               celltype = "Cardiomyocytes")
+```
+
 
 #8. GSEA score calculation
 

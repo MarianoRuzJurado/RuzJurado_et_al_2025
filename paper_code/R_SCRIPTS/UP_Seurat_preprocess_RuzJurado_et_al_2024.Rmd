@@ -4,7 +4,7 @@ author: "Mariano Ruz Jurado"
 date: "2024-12-11"
 output: html_document
 editor_options: 
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 #0. Load essential libraries
@@ -473,7 +473,7 @@ for (spc in c("Human", "Mice")) {
 
 ```{r}
 # load object
-Seu.Obj.annotated <- readRDS(file = "/media/Helios_scStorage/Mariano/Human_Mice_Comparison/Human_Mice_Integrated/Seurat_and_R_objects/SeuratObject.combined.integrated.annotated_10_08_22.rds")
+Seu.Obj.annotated <- readRDS(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/Human_Mice_Comparison/Human_Mice_Integrated/Seurat_and_R_objects/SeuratObject.combined.integrated.annotated_10_08_22.rds")
 DefaultAssay(object = Seu.Obj.annotated) <- "RNA"
 
 #create species specific sub sets of whole data set
@@ -780,5 +780,224 @@ write.table(as.data.frame(dense.matrix), file = "/media/Storage/anndata_shap/who
 write.csv(label_list, file = "/media/Storage/anndata_shap/whole_matrix_Seurat_extract/240830_SHAP_set_balanced_200_labels.csv", row.names = FALSE)
 ```
 
+
+#5. Extracting raw reads for scGPT
+```{r}
+Seu.Obj.annotated <- readRDS(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/Human_Mice_Comparison/Human_Mice_Integrated/Seurat_and_R_objects/SeuratObject.combined.integrated.annotated_10_08_22.rds")
+DefaultAssay(object = Seu.Obj.annotated) <- "RNA"
+
+Idents(Seu.Obj.annotated) <- "orig.ident"
+orig.ident <- levels(Idents(Seu.Obj.annotated))
+#get the subset obj
+Seu.Obj <- subset(Seu.Obj.annotated, idents = orig.ident[!orig.ident %in% c("Mice-AS-n2",
+                                                                  "Mice-HFpEF-n1",
+                                                                  "Mice-HFrEF-n2",
+                                                                  "Mice-CTRL-n6",
+                                                                  "Human-AS-n4",
+                                                                  "Human-HFpEF-n2",
+                                                                  "Human-HFrEF-n2",
+                                                                  "Human-CTRLlv-n2",
+                                                                  "Human_CTRLsp-n2")])
+#rename every Human-CTRL(sp,lv) to Human-CTRL
+Idents(Seu.Obj) <- "condition"
+Seu.Obj$condition <- plyr::revalue(Seu.Obj$condition,
+                                                   c(`Human_CTRLsp` = "Human-CTRL",
+                                                     `Human-CTRLlv` = "Human-CTRL"))
+
+#remove AS Neuros from mice, there are too few cells to train for that specific type
+remove.barcodes <- rownames(Seu.Obj@meta.data[Seu.Obj@meta.data$condition == "Mice-AS" & Seu.Obj@meta.data$cell_type == "Neuro",])
+Seu.Obj <- subset(Seu.Obj, cells = remove.barcodes, invert = TRUE)
+
+meta.data <- Seu.Obj@meta.data
+sparse.matrix <- Seu.Obj@assays$RNA@counts
+dense.matrix <- as.matrix(sparse.matrix)
+dense.matrix <- t(dense.matrix)
+
+
+#Create stratified Training and Testing set
+library(caret)
+
+label_list <- paste(Seu.Obj@meta.data$condition,
+                    Seu.Obj@meta.data$cell_type, sep = "_")
+
+
+
+# Create a stratified partition of the data
+set.seed(123)  # for reproducibility
+trainIndex <- createDataPartition(label_list, p = 0.80, list = FALSE)
+
+# Split the data into training and test sets
+train_set <- dense.matrix[trainIndex,]
+val_set <- dense.matrix[-trainIndex,]
+
+# Save the training set
+write.table(as.data.frame(train_set), file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/objects/train_set_rawCounts_p_80.csv", sep = ",", col.names = T, row.names = T)
+
+
+#Save test matrix Matrix
+write.table(as.data.frame(val_set), file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/objects/val_set_rawCounts_p_20.csv", sep = ",", col.names = T, row.names = T)
+
+
+
+# create a list of labels for training data, save as csv for python import
+
+label_list.train <- character()
+pb = txtProgressBar(min = 0, max = length(rownames(train_set)), initial = 0)
+for (i in 1:length(rownames(train_set))){
+    setTxtProgressBar(pb, i)
+    barcode <- rownames(train_set)[i]
+    condition <- Seu.Obj@meta.data[barcode,]$condition
+    cell_type <- Seu.Obj@meta.data[barcode,]$cell_type
+    label_list.train[i] <- paste0(condition,"_",cell_type)
+}
+close(pb)
+
+write.csv(label_list.train, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/objects/train_set_rawCounts_labels_p_80.csv", row.names = FALSE)
+
+#create a list of labels for my training data, save as csv for python import
+
+label_list.val <- character()
+pb = txtProgressBar(min = 0, max = length(rownames(val_set)), initial = 0)
+for (i in 1:length(rownames(val_set))){
+    setTxtProgressBar(pb, i)
+    barcode <- rownames(val_set)[i]
+    condition <- Seu.Obj@meta.data[barcode,]$condition
+    cell_type <- Seu.Obj@meta.data[barcode,]$cell_type
+    label_list.val[i] <- paste0(condition,"_",cell_type)
+}
+close(pb)
+
+write.csv(label_list.val, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/objects/val_set_rawCounts_labels_p_20.csv", row.names = FALSE)
+
+```
+
+## 5.1 Shuffle randomly Data tables (Good practice for better training)
+
+```{r}
+#Load the data sets
+train_set <- read.delim(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/objects/train_set_rawCounts_p_80.csv", header= TRUE, sep = ",")
+val_set <- read.delim(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/objects/val_set_rawCounts_p_20.csv", header= TRUE, sep = ",")
+
+#Load the labels
+train_labels <- read.delim(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/objects/train_set_rawCounts_labels_p_80.csv", sep = ",")
+val_labels <- read.delim(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/objects/val_set_rawCounts_labels_p_20.csv", sep = ",")
+
+
+#Create randomness in data
+set.seed(123) # reproducibility
+shuffled_numbers <- sample(nrow(train_set))
+
+#shuffle the frame and labels
+shuffled_train_set <- train_set[shuffled_numbers,]
+shuffled_train_labels <- as.data.frame(train_labels[shuffled_numbers,])
+
+#check if labels are still correctly assigned, lets check 6 random rows
+random_rows <- c(rownames(shuffled_train_set)[1],
+  rownames(shuffled_train_set)[11],
+  rownames(shuffled_train_set)[111],
+  rownames(shuffled_train_set)[1111],
+  rownames(shuffled_train_set)[11111],
+  rownames(shuffled_train_set)[111111])
+
+#Check if label correct
+for (rwnm in random_rows) {
+  nbr <- which(rownames(shuffled_train_set) == rwnm)
+  label_name <- shuffled_train_labels[nbr,]
+  nbr_truth <- which(rownames(train_set) == rwnm)
+  truth_label_name <- train_labels[nbr_truth,]
+
+  if (label_name == truth_label_name) {
+    print(paste0(label_name, " is identical to ", truth_label_name, ", labels identical for the selected random row"))
+  }
+
+  if (label_name != truth_label_name) {
+    print(paste0(label_name, " is NOT identical to ", truth_label_name, ", labels NOT identical for the selected random row"))
+  }
+}
+
+#if everything is fine save as randomized sample set
+write.table(shuffled_train_set, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/objects/RANDOMIZED_train_set_rawCounts_p_80.csv", sep = ",", col.names = T, row.names = T)
+
+write.csv(shuffled_train_labels, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/objects/RANDOMIZED_train_set_rawCounts_labels_p_80.csv", row.names = FALSE)
+
+
+#Now repeat for validation data set
+
+#Create randomness in data
+set.seed(123) # reproducibility
+shuffled_numbers <- sample(nrow(val_set))
+
+#shuffle the frame and labels
+shuffled_val_set <- val_set[shuffled_numbers,]
+shuffled_val_labels <- as.data.frame(val_labels[shuffled_numbers,])
+
+#check if labels are still correctly assigned, lets check 6 random rows
+random_rows <- c(rownames(shuffled_val_set)[1],
+  rownames(shuffled_val_set)[11],
+  rownames(shuffled_val_set)[111],
+  rownames(shuffled_val_set)[1111],
+  rownames(shuffled_val_set)[11111],
+  rownames(shuffled_val_set)[44972])
+
+#Check if label correct
+for (rwnm in random_rows) {
+  nbr <- which(rownames(shuffled_val_set) == rwnm)
+  label_name <- shuffled_val_labels[nbr,]
+  nbr_truth <- which(rownames(val_set) == rwnm)
+  truth_label_name <- val_labels[nbr_truth,]
+
+  if (label_name == truth_label_name) {
+    print(paste0(label_name, " is identical to ", truth_label_name, ", labels identical for the selected random row"))
+  }
+
+  if (label_name != truth_label_name) {
+    print(paste0(label_name, " is NOT identical to ", truth_label_name, ", labels NOT identical for the selected random row"))
+  }
+}
+
+#if everything is fine save as randomized sample set
+write.table(shuffled_val_set, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/objects/RANDOMIZED_val_set_rawCounts_p_20.csv", sep = ",", col.names = T, row.names = T)
+
+write.csv(shuffled_val_labels, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/objects/RANDOMIZED_val_set_rawCounts_labels_p_20.csv", row.names = FALSE)
+```
+
+##5.2 Extracting normalized expression data for machine learning training for test data
+
+```{r}
+
+### Create set for testing, best quality samples
+Idents(Seu.Obj.annotated) <- "orig.ident"
+orig.ident <- levels(Idents(Seu.Obj.annotated))
+Seu.Obj.test <- subset(Seu.Obj.annotated, idents = orig.ident[orig.ident %in% c("Mice-AS-n2",
+                                                                  "Mice-HFpEF-n1",
+                                                                  "Mice-HFrEF-n2",
+                                                                  "Mice-CTRL-n6",
+                                                                  "Human-AS-n4",
+                                                                  "Human-HFpEF-n2",
+                                                                  "Human-HFrEF-n2",
+                                                                  "Human-CTRLlv-n2",
+                                                                  "Human_CTRLsp-n2")])
+
+#rename every Human-CTRL(sp,lv) Human-CTRL
+Idents(Seu.Obj.test) <- "condition"
+Seu.Obj.test$condition <- plyr::revalue(Seu.Obj.test$condition,c(`Human_CTRLsp` = "Human-CTRL",
+                                   `Human-CTRLlv` = "Human-CTRL"))
+
+#remove AS Neuros from mice, there are too less cells to train
+remove.barcodes <- rownames(Seu.Obj.test@meta.data[Seu.Obj.test@meta.data$condition == "Mice-AS" & Seu.Obj.test@meta.data$cell_type == "Neuro",])
+Seu.Obj.test <- subset(Seu.Obj.test, cells = remove.barcodes, invert = TRUE)
+
+meta.data <- Seu.Obj.test@meta.data
+sparse.matrix <- Seu.Obj.test@assays$RNA@counts
+dense.matrix <- as.matrix(sparse.matrix)
+dense.matrix <- t(dense.matrix)
+
+label_list <- paste(Seu.Obj.test@meta.data$condition, Seu.Obj.test@meta.data$cell_type, sep = "_")
+
+# Save the test set
+write.table(as.data.frame(dense.matrix), file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/objects/test_set_rawCounts.csv", sep = ",", col.names = T, row.names = T)
+
+write.csv(label_list, file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/objects/test_set_rawCounts_labels.csv", row.names = FALSE)
+```
 
 

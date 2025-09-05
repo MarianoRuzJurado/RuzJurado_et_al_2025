@@ -24,13 +24,13 @@ sink(file = paste0(outputFolder,"/NN_Paper_Script.log"), append = TRUE, split = 
 
 
 #Load in Data frames + some adjustments
-test_labels <- read.csv(file = "/media/Helios_scStorage/Mariano/NN_Human_Mice/f1_loss_runs_24_06_18/240519_test_labels_binarized.csv", header = FALSE)
+test_labels <- read.csv(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/f1_loss_runs_24_06_18/240519_test_labels_binarized.csv", header = FALSE)
 test_labels <- data.frame(lapply(test_labels, as.numeric))
 colnames(test_labels) <- c('Human', 'Mice','Cardiomyocytes', 'Endothelial', 'Fibroblasts',
                            'Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle','AS', 'HFpEF', 'HFrEF', 'CTRL')
 
 
-predicted_labels <- read.csv(file = "/media/Helios_scStorage/Mariano/NN_Human_Mice/f1_loss_runs_24_06_18/AE_True_5000_2400_350_2200_5150_pred_results_MLP_795_230_105_Batch_10240_SEED_1234_RUN3.csv", header = FALSE)
+predicted_labels <- read.csv(file = "/mnt/mariano/scStorage/Mariano/NN_Human_Mice/f1_loss_runs_24_06_18/AE_True_5000_2400_350_2200_5150_pred_results_MLP_795_230_105_Batch_10240_SEED_1234_RUN3.csv", header = FALSE)
 predicted_labels <- data.frame(lapply(predicted_labels, as.numeric))
 colnames(predicted_labels) <- c('Human', 'Mice','Cardiomyocytes', 'Endothelial', 'Fibroblasts',
                                 'Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle', 'AS', 'HFpEF', 'HFrEF', 'CTRL')
@@ -534,4 +534,1537 @@ p1 <- ggplot(comb_df, aes(x=CCR, y= percentage, fill=Model))+
     scale_fill_manual(values = plot_colors)
 p1
 ggsave(plot = p1, filename = "/media/Helios_scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_CCR/Run3_CCR_Barplot_LGR_NN.pdf", width = 6, height = 5)
+```
+
+# 5. AE confusion matrix logistic regression results
+```{r}
+predicted_labels_LGR <- read.csv(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/multinomial_logistic_regression_model/new_run_3_major_class_AE/one_hot_encoded_predictions_test_data_LR_multinomial.csv", header = TRUE)
+predicted_labels_LGR <- data.frame(lapply(predicted_labels_LGR, as.numeric))
+
+
+#Now for cell type
+test_labels.celltype <- test_labels[,colnames(test_labels) %in% c('Cardiomyocytes', 'Endothelial', 'Fibroblasts','Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle')]
+predicted_labels_LGR.celltype <- predicted_labels_LGR[,colnames(predicted_labels_LGR) %in% c('Cardiomyocytes', 'Endothelial', 'Fibroblasts','Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle')]
+
+# Create a vector of cell types
+cell_types <- colnames(test_labels.celltype) #"1 Cardiomyocytes" "2 Endothelial"    "3 Fibroblasts"    "4 Immune.cells"   "5 Neuro"          "6 Pericytes"      "7 Smooth.Muscle" 
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.celltype, 1, function(row) {
+  cell_type_index <- which.max(row)
+  return(cell_type_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4,5,6,7),
+                      to = c("CM", "EC", "FB", "IC", "NC", "PC", "SMC"))
+
+actual.df <- data.frame(Cell_type_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels_LGR.celltype, 1, function(row) {
+  cell_type_index <- which.max(row)
+  return(cell_type_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4,5,6,7),
+                      to = c("CM", "EC", "FB", "IC", "NC", "PC", "SMC"))
+
+pred.df <- data.frame(Cell_type_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$Cell_type_encoded,
+                    "prediction" = pred.df$Cell_type_encoded) 
+
+
+
+conf_mat_cell <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_cell$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.1)
+
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/Paper_R_code/confusion_matrix_plots/AE_Run3_LGR_confusion_matrix_celltype.pdf", plot=p1, width = 8, height = 8)
+
+
+#Now for Disease
+test_labels.disease <- test_labels[,colnames(test_labels) %in% c('AS', 'HFpEF', 'HFrEF', 'CTRL')]
+predicted_labels_LGR.disease <- predicted_labels_LGR[,colnames(predicted_labels_LGR) %in% c('AS', 'HFpEF', 'HFrEF', 'CTRL')]
+
+# Create a vector of cell types
+diseases <- colnames(test_labels.disease) #"1 AS" "2 HFpEF"    "3 HFrEF"    "4 CTRL
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.disease, 1, function(row) {
+  disease_index <- which.max(row)
+  return(disease_index)
+})
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+
+actual.df <- data.frame(disease_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels_LGR.disease, 1, function(row) {
+  disease_index <- which.max(row)
+  return(disease_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+
+pred.df <- data.frame(disease_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$disease_encoded,
+                    "prediction" = pred.df$disease_encoded) 
+
+
+
+conf_mat_dis <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_dis$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.3)
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/Paper_R_code/confusion_matrix_plots/AE_Run3_LGR_confusion_matrix_disease.pdf", plot=p1, width = 10, height = 10)
+
+
+#Create three data frames (Species, Cell type, Disease), calculate identity score
+test_labels.species <- test_labels[,colnames(test_labels) %in% c("Human","Mice")]
+predicted_labels.species_LGR <- predicted_labels_LGR[,colnames(predicted_labels_LGR) %in% c("Human","Mice")]
+
+species <- colnames(test_labels.species) #"1 Human # 2 Mice
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.species, 1, function(row) {
+  species_index <- which.max(row)
+  return(species_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2),
+                      to = c("Human", "Mouse"))
+
+actual.df <- data.frame(species_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels.species_LGR, 1, function(row) {
+  species_index <- which.max(row)
+  return(species_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2),
+                      to = c("Human", "Mouse"))
+
+pred.df <- data.frame(species_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$species_encoded,
+                    "prediction" = pred.df$species_encoded) 
+
+conf_mat_spec <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_spec$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.4)
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/Paper_R_code/confusion_matrix_plots/AE_Run3_LGR_confusion_matrix_species.pdf", plot=p1, width = 10, height = 10)
+
+# Overall correct classification rates logistic regression model per 3 groups
+conf_mat_spec$`Confusion Matrix`[[1]]
+
+#correct rate for human
+tp_h <- conf_mat_spec$`Confusion Matrix`[[1]][1,]$N
+perc_correct_h <- (tp_h / sum(conf_mat_spec$`Confusion Matrix`[[1]][1,]$N, conf_mat_spec$`Confusion Matrix`[[1]][2,]$N)) * 100
+#correct rate for mice
+tp_m <- conf_mat_spec$`Confusion Matrix`[[1]][4,]$N
+perc_correct_m <- (tp_m / sum(conf_mat_spec$`Confusion Matrix`[[1]][3,]$N, conf_mat_spec$`Confusion Matrix`[[1]][4,]$N)) * 100
+avg_correct_rate_spec <- sum(perc_correct_h, perc_correct_m) / 2
+
+
+mat_cells <- conf_mat_cell$`Confusion Matrix`[[1]]
+
+#correct rate for CM
+tp_cm <- mat_cells[1,]$N
+perc_correct_cm <- (tp_cm / mat_cells %>%
+  filter(Target == "CM") %>%
+  summarize(total = sum(N)) %>%
+  pull(total)) * 100 
+#correct rate for EC
+tp_ec <- mat_cells[9,]$N
+perc_correct_ec <- (tp_ec / mat_cells %>%
+  filter(Target == "EC") %>%
+  summarize(total = sum(N)) %>%
+  pull(total)) * 100 
+#correct rate for FB
+tp_fb <- mat_cells[17,]$N
+perc_correct_fb <- (tp_fb / mat_cells %>%
+  filter(Target == "FB") %>%
+  summarize(total = sum(N)) %>%
+  pull(total)) * 100 
+#correct rate for IC
+tp_ic <- mat_cells[25,]$N
+perc_correct_ic <- (tp_ic / mat_cells %>%
+  filter(Target == "IC") %>%
+  summarize(total = sum(N)) %>%
+  pull(total)) * 100 
+#correct rate for NC
+tp_nc <- mat_cells[33,]$N
+perc_correct_nc <- (tp_nc / mat_cells %>%
+  filter(Target == "NC") %>%
+  summarize(total = sum(N)) %>%
+  pull(total)) * 100 
+#correct rate for PC
+tp_pc <- mat_cells[41,]$N
+perc_correct_pc <- (tp_pc / mat_cells %>%
+  filter(Target == "PC") %>%
+  summarize(total = sum(N)) %>%
+  pull(total)) * 100 
+#correct rate for SMC
+tp_smc <- mat_cells[49,]$N
+perc_correct_smc <- (tp_smc / mat_cells %>%
+  filter(Target == "SMC") %>%
+  summarize(total = sum(N)) %>%
+  pull(total)) * 100 
+avg_correct_rate_cell <- sum(perc_correct_cm, perc_correct_ec, perc_correct_fb,
+                             perc_correct_ic, perc_correct_nc, perc_correct_pc, perc_correct_smc) / 7
+
+
+mat_dis <- conf_mat_dis$`Confusion Matrix`[[1]]
+
+#correct rate for Healthy
+tp_Healthy <- mat_dis[1,]$N
+perc_correct_Healthy <- (tp_Healthy / mat_dis %>%
+  filter(Target == "Healthy") %>%
+  summarize(total = sum(N)) %>%
+  pull(total)) * 100 
+#correct rate for HFpEF
+tp_HFpEF <- mat_dis[6,]$N
+perc_correct_HFpEF <- (tp_HFpEF / mat_dis %>%
+  filter(Target == "HFpEF") %>%
+  summarize(total = sum(N)) %>%
+  pull(total)) * 100 
+#correct rate for HFrEF
+tp_HFrEF <- mat_dis[11,]$N
+perc_correct_HFrEF <- (tp_HFrEF / mat_dis %>%
+  filter(Target == "HFrEF") %>%
+  summarize(total = sum(N)) %>%
+  pull(total)) * 100 
+#correct rate for HP
+tp_HP <- mat_dis[16,]$N
+perc_correct_HP <- (tp_HP / mat_dis %>%
+  filter(Target == "HP") %>%
+  summarize(total = sum(N)) %>%
+  pull(total)) * 100 
+
+avg_correct_rate_dis <- sum(perc_correct_Healthy, perc_correct_HFpEF, perc_correct_HFrEF, perc_correct_HP) / 4
+
+LGR_df <- data.frame(CCR = c("Species", "Cell type", "Disease"),
+                     percentage = c(avg_correct_rate_spec, avg_correct_rate_cell, avg_correct_rate_dis),
+                     Model = "LGR")
+# Take the numbers from previous calculations
+NN_df <- data.frame(CCR = c("Species", "Cell type", "Disease"),
+                    percentage = c(100, 92.69, 97.38),
+                    Model = "NN")
+# combine
+comb_df <- rbind(LGR_df, NN_df)
+comb_df$CCR <- factor(comb_df$CCR, levels = c("Species", "Cell type", "Disease"))
+
+# second dataframe with dots for values per class
+LGR_dot_df <- data.frame(CCR = c(rep("Species",2),
+                                 rep("Cell type",7),
+                                 rep("Disease",4)),
+                         percentage = c(perc_correct_h,perc_correct_m,perc_correct_cm,perc_correct_ec,perc_correct_fb,
+                                        perc_correct_ic,perc_correct_nc, perc_correct_pc, perc_correct_smc,
+                                        perc_correct_Healthy, perc_correct_HFpEF, perc_correct_HFrEF, 
+                                        perc_correct_HP),
+                         Model = "LGR")
+
+# Take the numbers from previous calculations
+NN_dot_df <- data.frame(CCR = c(rep("Species",2),
+                                 rep("Cell type",7),
+                                 rep("Disease",4)),
+                         percentage = c(100,100,
+                                        98.5,98.4,95.6,95.3,80.9,94.8,85.3,
+                                        99.8, 98.7, 92.6, 98.6),
+                         Model = "NN")
+
+comb_dot_df <- rbind(LGR_dot_df, NN_dot_df)
+comb_dot_df$CCR <- factor(comb_dot_df$CCR, levels = c("Species", "Cell type", "Disease"))
+
+plot_colors <- c("#1f77b4","#f37f1aff")
+p1 <- ggplot(comb_df, aes(x=CCR, y= percentage, fill=Model))+
+  geom_col(position = "dodge", color = 'black')+
+  geom_point(data = comb_dot_df, aes(x=CCR,y=percentage, fill = Model), size = 1.5, shape=20, position = position_dodge(width = 0.9))+
+  ylab("Correct classification rate \n (in %)")+
+  xlab("")+
+  theme_classic()+
+    theme(plot.title = element_text(face = "bold", color = "black", hjust = 0.5, size = 14),
+          axis.title.y = element_text(face = "bold", color = "black", size = 14),
+          axis.text.x = element_text(face = "bold", color = "black", angle = 45, hjust = 1, size = 14),
+          axis.text.y = element_text(face = "bold", color = "black", hjust = 1, size = 14),
+          legend.text = element_text(face = "bold", color = "black", size = 14),
+          legend.title = element_text(face = "bold", color = "black", size = 14),
+          legend.position = "right")+
+    scale_fill_manual(values = plot_colors)
+p1
+ggsave(plot = p1, filename = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/Paper_R_code/barplot_CCR/AE_Run3_CCR_Barplot_LGR_NN.pdf", width = 6, height = 5)
+```
+
+#6. XGBoost confusion matrix plot results
+```{r}
+
+predicted_labels_XG <- read.csv(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250806_XGBoost_training/XGBoost_pred_100epochs_logloss.csv", header = FALSE)
+predicted_labels_XG <- data.frame(lapply(predicted_labels_XG, as.numeric))
+colnames(predicted_labels_XG) <- c('Human', 'Mice','Cardiomyocytes', 'Endothelial', 'Fibroblasts',
+                                'Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle', 'AS', 'HFpEF', 'HFrEF', 'CTRL')
+
+
+#Now for cell type
+test_labels.celltype <- test_labels[,colnames(test_labels) %in% c('Cardiomyocytes', 'Endothelial', 'Fibroblasts','Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle')]
+predicted_labels_XG.celltype <- predicted_labels_XG[,colnames(predicted_labels_XG) %in% c('Cardiomyocytes', 'Endothelial', 'Fibroblasts','Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle')]
+
+# Create a vector of cell types
+cell_types <- colnames(test_labels.celltype) #"1 Cardiomyocytes" "2 Endothelial"    "3 Fibroblasts"    "4 Immune.cells"   "5 Neuro"          "6 Pericytes"      "7 Smooth.Muscle" 
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.celltype, 1, function(row) {
+  cell_type_index <- which.max(row)
+  return(cell_type_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4,5,6,7),
+                      to = c("CM", "EC", "FB", "IC", "NC", "PC", "SMC"))
+
+actual.df <- data.frame(Cell_type_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels_XG.celltype, 1, function(row) {
+  cell_type_index <- which.max(row)
+  return(cell_type_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4,5,6,7),
+                      to = c("CM", "EC", "FB", "IC", "NC", "PC", "SMC"))
+
+pred.df <- data.frame(Cell_type_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$Cell_type_encoded,
+                    "prediction" = pred.df$Cell_type_encoded) 
+
+
+
+conf_mat_cell <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_cell$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.1)
+
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250806_XGBoost_training/confusion_matrix/XGBoost_Run3_LGR_confusion_matrix_celltype.pdf", plot=p1, width = 8, height = 8)
+
+
+#Now for Disease
+test_labels.disease <- test_labels[,colnames(test_labels) %in% c('AS', 'HFpEF', 'HFrEF', 'CTRL')]
+predicted_labels_XG.disease <- predicted_labels_XG[,colnames(predicted_labels_XG) %in% c('AS', 'HFpEF', 'HFrEF', 'CTRL')]
+
+# Create a vector of cell types
+diseases <- colnames(test_labels.disease) #"1 AS" "2 HFpEF"    "3 HFrEF"    "4 CTRL
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.disease, 1, function(row) {
+  disease_index <- which.max(row)
+  return(disease_index)
+})
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+
+actual.df <- data.frame(disease_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels_XG.disease, 1, function(row) {
+  disease_index <- which.max(row)
+  return(disease_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+
+pred.df <- data.frame(disease_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$disease_encoded,
+                    "prediction" = pred.df$disease_encoded) 
+
+
+
+conf_mat_dis <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_dis$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.3)
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250806_XGBoost_training/confusion_matrix/XGBoost_Run3_LGR_confusion_matrix_disease.pdf", plot=p1, width = 10, height = 10)
+
+
+#Create three data frames (Species, Cell type, Disease), calculate identity score
+test_labels.species <- test_labels[,colnames(test_labels) %in% c("Human","Mice")]
+predicted_labels.species_LGR <- predicted_labels_XG[,colnames(predicted_labels_XG) %in% c("Human","Mice")]
+
+species <- colnames(test_labels.species) #"1 Human # 2 Mice
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.species, 1, function(row) {
+  species_index <- which.max(row)
+  return(species_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2),
+                      to = c("Human", "Mouse"))
+
+actual.df <- data.frame(species_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels.species_LGR, 1, function(row) {
+  species_index <- which.max(row)
+  return(species_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2),
+                      to = c("Human", "Mouse"))
+
+pred.df <- data.frame(species_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$species_encoded,
+                    "prediction" = pred.df$species_encoded) 
+
+conf_mat_spec <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_spec$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.4)
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250806_XGBoost_training/confusion_matrix/XGBoost_Run3_LGR_confusion_matrix_species.pdf", plot=p1, width = 10, height = 10)
+```
+
+##6.1 XGBoost + AE confusion matrix plot results
+```{r}
+
+predicted_labels_XG <- read.csv(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250806_XGBoost_training/XGBoost_AE_pred_100epochs_logloss.csv", header = FALSE)
+predicted_labels_XG <- data.frame(lapply(predicted_labels_XG, as.numeric))
+colnames(predicted_labels_XG) <- c('Human', 'Mice','Cardiomyocytes', 'Endothelial', 'Fibroblasts',
+                                'Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle', 'AS', 'HFpEF', 'HFrEF', 'CTRL')
+
+
+#Now for cell type
+test_labels.celltype <- test_labels[,colnames(test_labels) %in% c('Cardiomyocytes', 'Endothelial', 'Fibroblasts','Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle')]
+predicted_labels_XG.celltype <- predicted_labels_XG[,colnames(predicted_labels_XG) %in% c('Cardiomyocytes', 'Endothelial', 'Fibroblasts','Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle')]
+
+# Create a vector of cell types
+cell_types <- colnames(test_labels.celltype) #"1 Cardiomyocytes" "2 Endothelial"    "3 Fibroblasts"    "4 Immune.cells"   "5 Neuro"          "6 Pericytes"      "7 Smooth.Muscle" 
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.celltype, 1, function(row) {
+  cell_type_index <- which.max(row)
+  return(cell_type_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4,5,6,7),
+                      to = c("CM", "EC", "FB", "IC", "NC", "PC", "SMC"))
+
+actual.df <- data.frame(Cell_type_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels_XG.celltype, 1, function(row) {
+  cell_type_index <- which.max(row)
+  return(cell_type_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4,5,6,7),
+                      to = c("CM", "EC", "FB", "IC", "NC", "PC", "SMC"))
+
+pred.df <- data.frame(Cell_type_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$Cell_type_encoded,
+                    "prediction" = pred.df$Cell_type_encoded) 
+
+
+
+conf_mat_cell <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_cell$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.1)
+
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250806_XGBoost_training/confusion_matrix/XGBoost_AE_confusion_matrix_celltype.pdf", plot=p1, width = 8, height = 8)
+
+
+#Now for Disease
+test_labels.disease <- test_labels[,colnames(test_labels) %in% c('AS', 'HFpEF', 'HFrEF', 'CTRL')]
+predicted_labels_XG.disease <- predicted_labels_XG[,colnames(predicted_labels_XG) %in% c('AS', 'HFpEF', 'HFrEF', 'CTRL')]
+
+# Create a vector of cell types
+diseases <- colnames(test_labels.disease) #"1 AS" "2 HFpEF"    "3 HFrEF"    "4 CTRL
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.disease, 1, function(row) {
+  disease_index <- which.max(row)
+  return(disease_index)
+})
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+
+actual.df <- data.frame(disease_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels_XG.disease, 1, function(row) {
+  disease_index <- which.max(row)
+  return(disease_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+
+pred.df <- data.frame(disease_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$disease_encoded,
+                    "prediction" = pred.df$disease_encoded) 
+
+
+
+conf_mat_dis <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_dis$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.3)
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250806_XGBoost_training/confusion_matrix/XGBoost_AE_confusion_matrix_disease.pdf", plot=p1, width = 10, height = 10)
+
+
+#Create three data frames (Species, Cell type, Disease), calculate identity score
+test_labels.species <- test_labels[,colnames(test_labels) %in% c("Human","Mice")]
+predicted_labels.species_LGR <- predicted_labels_XG[,colnames(predicted_labels_XG) %in% c("Human","Mice")]
+
+species <- colnames(test_labels.species) #"1 Human # 2 Mice
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.species, 1, function(row) {
+  species_index <- which.max(row)
+  return(species_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2),
+                      to = c("Human", "Mouse"))
+
+actual.df <- data.frame(species_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels.species_LGR, 1, function(row) {
+  species_index <- which.max(row)
+  return(species_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2),
+                      to = c("Human", "Mouse"))
+
+pred.df <- data.frame(species_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$species_encoded,
+                    "prediction" = pred.df$species_encoded) 
+
+conf_mat_spec <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_spec$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.4)
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250806_XGBoost_training/confusion_matrix/XGBoost_AE_confusion_matrix_species.pdf", plot=p1, width = 10, height = 10)
+```
+
+#7. Koenig confusion matrix plot results
+```{r}
+#Load in Data frames + some adjustments
+test_labels <- read.csv(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/RUN2/AE_True_5000_2400_350_2200_5150_test_labels_binarized_MLP_795_230_105_Batch_10240_SEED_1234.csv", header = FALSE)
+test_labels <- data.frame(lapply(test_labels, as.numeric))
+colnames(test_labels) <- c('Human', 'Mice','Cardiomyocytes', 'Endothelial', 'Fibroblasts',
+                           'Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle','AS', 'HFpEF', 'HFrEF', 'CTRL')
+
+predicted_labels_si <- read.csv(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/RUN2/AE_True_5000_2400_350_2200_5150_pred_results_binary_focal_crossentropy_MLP_795_230_105_Batch_10240_SEED_1234.csv", header = FALSE)
+predicted_labels_si <- data.frame(lapply(predicted_labels_si, as.numeric))
+colnames(predicted_labels_si) <- c('Human', 'Mice','Cardiomyocytes', 'Endothelial', 'Fibroblasts',
+                                'Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle', 'AS', 'HFpEF', 'HFrEF', 'CTRL')
+
+
+#Now for cell type
+test_labels.celltype <- test_labels[,colnames(test_labels) %in% c('Cardiomyocytes', 'Endothelial', 'Fibroblasts','Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle')]
+predicted_labels_si.celltype <- predicted_labels_si[,colnames(predicted_labels_si) %in% c('Cardiomyocytes', 'Endothelial', 'Fibroblasts','Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle')]
+
+# Create a vector of cell types
+cell_types <- colnames(test_labels.celltype) #"1 Cardiomyocytes" "2 Endothelial"    "3 Fibroblasts"    "4 Immune.cells"   "5 Neuro"          "6 Pericytes"      "7 Smooth.Muscle" 
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.celltype, 1, function(row) {
+  cell_type_index <- which.max(row)
+  return(cell_type_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4,5,6,7),
+                      to = c("CM", "EC", "FB", "IC", "NC", "PC", "SMC"))
+
+actual.df <- data.frame(Cell_type_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels_si.celltype, 1, function(row) {
+  cell_type_index <- which.max(row)
+  return(cell_type_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4,5,6,7),
+                      to = c("CM", "EC", "FB", "IC", "NC", "PC", "SMC"))
+
+pred.df <- data.frame(Cell_type_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$Cell_type_encoded,
+                    "prediction" = pred.df$Cell_type_encoded) 
+
+
+
+conf_mat_cell <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_cell$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.1)
+
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/RUN2/cm/koenig_Run2_confusion_matrix_celltype.pdf", plot=p1, width = 8, height = 8)
+
+
+#Now for Disease
+test_labels.disease <- test_labels[,colnames(test_labels) %in% c('AS', 'HFpEF', 'HFrEF', 'CTRL')]
+predicted_labels_si.disease <- predicted_labels_si[,colnames(predicted_labels_si) %in% c('AS', 'HFpEF', 'HFrEF', 'CTRL')]
+
+# Create a vector of cell types
+diseases <- colnames(test_labels.disease) #"1 AS" "2 HFpEF"    "3 HFrEF"    "4 CTRL
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.disease, 1, function(row) {
+  disease_index <- which.max(row)
+  return(disease_index)
+})
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+
+actual.df <- data.frame(disease_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels_si.disease, 1, function(row) {
+  disease_index <- which.max(row)
+  return(disease_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+
+pred.df <- data.frame(disease_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$disease_encoded,
+                    "prediction" = pred.df$disease_encoded) 
+
+
+
+conf_mat_dis <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_dis$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.3)
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/RUN2/cm/koenig_Run2_confusion_matrix_disease.pdf", plot=p1, width = 10, height = 10)
+
+
+```
+
+#8. scGPT confusion matrix plot embedding
+```{r}
+#Load in Data frames + some adjustments
+test_labels <- read.csv(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/embeddings_extr/RUN8/test_labels_binarized_MLP_795_230_105_Batch_10240_SEED_1234.csv", header = FALSE)
+test_labels <- data.frame(lapply(test_labels, as.numeric))
+colnames(test_labels) <- c('Human', 'Mice','Cardiomyocytes', 'Endothelial', 'Fibroblasts',
+                           'Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle','AS', 'HFpEF', 'HFrEF', 'CTRL')
+
+predicted_labels_si <- read.csv(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/embeddings_extr/RUN8/Pred_results_MLP_795_230_105_Batch_10240_SEED_1234.csv", header = FALSE)
+predicted_labels_si <- data.frame(lapply(predicted_labels_si, as.numeric))
+colnames(predicted_labels_si) <- c('Human', 'Mice','Cardiomyocytes', 'Endothelial', 'Fibroblasts',
+                                'Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle', 'AS', 'HFpEF', 'HFrEF', 'CTRL')
+
+
+#Now for cell type
+test_labels.celltype <- test_labels[,colnames(test_labels) %in% c('Cardiomyocytes', 'Endothelial', 'Fibroblasts','Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle')]
+predicted_labels_si.celltype <- predicted_labels_si[,colnames(predicted_labels_si) %in% c('Cardiomyocytes', 'Endothelial', 'Fibroblasts','Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle')]
+
+# Create a vector of cell types
+cell_types <- colnames(test_labels.celltype) #"1 Cardiomyocytes" "2 Endothelial"    "3 Fibroblasts"    "4 Immune.cells"   "5 Neuro"          "6 Pericytes"      "7 Smooth.Muscle" 
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.celltype, 1, function(row) {
+  cell_type_index <- which.max(row)
+  return(cell_type_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4,5,6,7),
+                      to = c("CM", "EC", "FB", "IC", "NC", "PC", "SMC"))
+
+actual.df <- data.frame(Cell_type_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels_si.celltype, 1, function(row) {
+  cell_type_index <- which.max(row)
+  return(cell_type_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4,5,6,7),
+                      to = c("CM", "EC", "FB", "IC", "NC", "PC", "SMC"))
+
+pred.df <- data.frame(Cell_type_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$Cell_type_encoded,
+                    "prediction" = pred.df$Cell_type_encoded) 
+
+
+
+conf_mat_cell <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_cell$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.1)
+
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/embeddings_extr/RUN8/cm/scGPT_Run8_confusion_matrix_celltype.pdf", plot=p1, width = 8, height = 8)
+
+
+#Now for Disease
+test_labels.disease <- test_labels[,colnames(test_labels) %in% c('AS', 'HFpEF', 'HFrEF', 'CTRL')]
+predicted_labels_si.disease <- predicted_labels_si[,colnames(predicted_labels_si) %in% c('AS', 'HFpEF', 'HFrEF', 'CTRL')]
+
+# Create a vector of cell types
+diseases <- colnames(test_labels.disease) #"1 AS" "2 HFpEF"    "3 HFrEF"    "4 CTRL
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.disease, 1, function(row) {
+  disease_index <- which.max(row)
+  return(disease_index)
+})
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+
+actual.df <- data.frame(disease_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels_si.disease, 1, function(row) {
+  disease_index <- which.max(row)
+  return(disease_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+
+pred.df <- data.frame(disease_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$disease_encoded,
+                    "prediction" = pred.df$disease_encoded) 
+
+
+
+conf_mat_dis <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_dis$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.3)
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/embeddings_extr/RUN8/cm/scGPT_Run8_confusion_matrix_disease.pdf", plot=p1, width = 10, height = 10)
+
+
+#Create three data frames (Species, Cell type, Disease), calculate identity score
+test_labels.species <- test_labels[,colnames(test_labels) %in% c("Human","Mice")]
+predicted_labels_si.species <- predicted_labels_si[,colnames(predicted_labels_si) %in% c("Human","Mice")]
+
+species <- colnames(test_labels.species) #"1 Human # 2 Mice
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.species, 1, function(row) {
+  species_index <- which.max(row)
+  return(species_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2),
+                      to = c("Human", "Mouse"))
+
+actual.df <- data.frame(species_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels_si.species, 1, function(row) {
+  species_index <- which.max(row)
+  return(species_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2),
+                      to = c("Human", "Mouse"))
+
+pred.df <- data.frame(species_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$species_encoded,
+                    "prediction" = pred.df$species_encoded) 
+
+conf_mat_spec <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_spec$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.4)
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250812_scGPT/embeddings_extr/RUN8/cm/scGPT_Run8_confusion_matrix_species.pdf", plot=p1, width = 10, height = 10)
+```
+
+
+#9. Recreate Bar plot with all tools included
+```{r}
+
+LGR_df <- data.frame(CCR = c("Species", "Cell type", "Disease"),
+                     percentage = c((92.7+100)/2, (0+89.9+0+63.4+93.9+95.6+96.4)/6, (100+3.4+84.6+44.5)/4),
+                     Model = "LGR")
+# Take the numbers from previous calculations
+NN_df <- data.frame(CCR = c("Species", "Cell type", "Disease"),
+                    percentage = c(100, 92.69, 97.38),
+                    Model = "NN")
+
+scGPT_df <- data.frame(CCR = c("Species", "Cell type", "Disease"),
+                    percentage = c(100, (84+95+94+92+93+95+98)/7, (100+57+4+87)/4),
+                    Model = "scGPT")
+
+XGB_df <- data.frame(CCR = c("Species", "Cell type", "Disease"),
+                    percentage = c(100, (82.3+93.2+80.5+90.9+94.7+97.6+98.8)/7, (99.3+88.4+98.2+99.6)/4),
+                    Model = "XGBoost")
+
+
+# combine
+comb_df <- rbind(LGR_df, NN_df, scGPT_df, XGB_df)
+comb_df$CCR <- factor(comb_df$CCR, levels = c("Species", "Cell type", "Disease"))
+
+# second dataframe with dots for values per class
+LGR_dot_df <- data.frame(CCR = c(rep("Species",2),
+                                 rep("Cell type",7),
+                                 rep("Disease",4)),
+                         percentage = c(92.7,100,96.4,95.6,93.9,
+                                        63.4,0, 89.9, 0,
+                                        100, 84.6, 3.4, 
+                                        44.5),
+                         Model = "LGR")
+
+# Take the numbers from previous calculations
+NN_dot_df <- data.frame(CCR = c(rep("Species",2),
+                                 rep("Cell type",7),
+                                 rep("Disease",4)),
+                         percentage = c(100,100,
+                                        98.5,98.4,95.6,95.3,80.9,94.8,85.3,
+                                        99.8, 98.7, 92.6, 98.6),
+                         Model = "NN")
+#scGPT
+scGPT_dot_df <- data.frame(CCR = c(rep("Species",2),
+                                 rep("Cell type",7),
+                                 rep("Disease",4)),
+                         percentage = c(100,100,
+                                        98,95,93,92,94,95,84,
+                                        100, 4 ,57 , 87),
+                         Model = "scGPT")
+
+#XGB
+XGB_dot_df <- data.frame(CCR = c(rep("Species",2),
+                                 rep("Cell type",7),
+                                 rep("Disease",4)),
+                         percentage = c(100,100,
+                                        98.8,97.6,94.7,90.9,80.5,93.2,82.3,
+                                        99.3, 98.2 ,88.4 , 99.6),
+                         Model = "XGBoost")
+
+comb_dot_df <- rbind(NN_dot_df, LGR_dot_df, scGPT_dot_df, XGB_dot_df)
+comb_dot_df$CCR <- factor(comb_dot_df$CCR, levels = c("Species", "Cell type", "Disease"))
+
+#set order of bar plots
+comb_df$Model <- factor(comb_df$Model, levels = c("NN", "LGR", "scGPT", "XGBoost"))
+comb_dot_df$Model <- factor(comb_dot_df$Model, levels = c("NN", "LGR", "scGPT", "XGBoost"))
+
+plot_colors <- c('#ff7f0e','maroon', '#4b006e', '#2F4F4F')
+p1 <- ggplot(comb_df, aes(x=CCR, y= percentage, fill=Model))+
+  geom_col(position = "dodge", color = 'black', alpha=0.85)+
+  geom_point(data = comb_dot_df, aes(x=CCR,y=percentage, fill = Model), size = 2.0, shape=20, position = position_dodge(width = 0.9))+
+  ylab("Correct classification rate \n (in %)")+
+  stat_summary(data = comb_dot_df, geom = "errorbar", fun.data = mean_se, position = position_dodge(width = 0.9), width=0.25, size=0.75)+ # NOTE FUTURE USE DEFIEN BOTH WIDTHS
+  xlab("")+
+  scale_y_continuous(expand = c(0.01,0.01))+
+  theme_classic()+
+    theme(plot.title = element_text(face = "bold", color = "black", hjust = 0.5, size = 14),
+          axis.title.y = element_text(face = "bold", color = "black", size = 14),
+          axis.text.x = element_text(face = "bold", color = "black", angle = 0, hjust = 0.5, size = 14),
+          axis.text.y = element_text(face = "bold", color = "black", hjust = 1, size = 14),
+          legend.text = element_text(face = "bold", color = "black", size = 14),
+          legend.title = element_text(face = "bold", color = "black", size = 14),
+          legend.position = "right")+
+    scale_fill_manual(values = plot_colors)
+p1
+
+ggsave(plot = p1, filename = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250829_Fig2e/Barplot_LGR_NN_XGBoost_scGPT.pdf", width = 5, height = 3)
+```
+
+
+
+#. Koenig confusion matrix plot no tr
+```{r}
+#Load in Data frames + some adjustments
+test_labels <- read.csv(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/koenig_et_al_2022_koening_test_labels_binarized_MLP_Batch_10240_SEED_1234.csv", header = FALSE)
+test_labels <- data.frame(lapply(test_labels, as.numeric))
+colnames(test_labels) <- c('Human', 'Mice','Cardiomyocytes', 'Endothelial', 'Fibroblasts',
+                           'Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle','AS', 'HFpEF', 'HFrEF', 'CTRL')
+
+predicted_labels_si <- read.csv(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/koenig_et_al_2022_pred_results_MLP_batch_10240_SEED_1234.csv", header = FALSE)
+predicted_labels_si <- data.frame(lapply(predicted_labels_si, as.numeric))
+colnames(predicted_labels_si) <- c('Human', 'Mice','Cardiomyocytes', 'Endothelial', 'Fibroblasts',
+                                'Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle', 'AS', 'HFpEF', 'HFrEF', 'CTRL')
+
+
+#Now for cell type
+test_labels.celltype <- test_labels[,colnames(test_labels) %in% c('Cardiomyocytes', 'Endothelial', 'Fibroblasts','Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle')]
+predicted_labels_si.celltype <- predicted_labels_si[,colnames(predicted_labels_si) %in% c('Cardiomyocytes', 'Endothelial', 'Fibroblasts','Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle')]
+
+# Create a vector of cell types
+cell_types <- colnames(test_labels.celltype) #"1 Cardiomyocytes" "2 Endothelial"    "3 Fibroblasts"    "4 Immune.cells"   "5 Neuro"          "6 Pericytes"      "7 Smooth.Muscle" 
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.celltype, 1, function(row) {
+  cell_type_index <- which.max(row)
+  return(cell_type_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4,5,6,7),
+                      to = c("CM", "EC", "FB", "IC", "NC", "PC", "SMC"))
+
+actual.df <- data.frame(Cell_type_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels_si.celltype, 1, function(row) {
+  cell_type_index <- which.max(row)
+  return(cell_type_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4,5,6,7),
+                      to = c("CM", "EC", "FB", "IC", "NC", "PC", "SMC"))
+
+pred.df <- data.frame(Cell_type_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$Cell_type_encoded,
+                    "prediction" = pred.df$Cell_type_encoded) 
+
+
+
+conf_mat_cell <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_cell$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.1)
+
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/cm/koenig_notr_confusion_matrix_celltype.pdf", plot=p1, width = 8, height = 8)
+
+
+#Now for Disease
+test_labels.disease <- test_labels[,colnames(test_labels) %in% c('AS', 'HFpEF', 'HFrEF', 'CTRL')]
+predicted_labels_si.disease <- predicted_labels_si[,colnames(predicted_labels_si) %in% c('AS', 'HFpEF', 'HFrEF', 'CTRL')]
+
+# Create a vector of cell types
+diseases <- colnames(test_labels.disease) #"1 AS" "2 HFpEF"    "3 HFrEF"    "4 CTRL
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.disease, 1, function(row) {
+  disease_index <- which.max(row)
+  return(disease_index)
+})
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+
+actual.df <- data.frame(disease_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels_si.disease, 1, function(row) {
+  disease_index <- which.max(row)
+  return(disease_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+
+pred.df <- data.frame(disease_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$disease_encoded,
+                    "prediction" = pred.df$disease_encoded) 
+
+
+
+conf_mat_dis <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_dis$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.3)
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/cm/koenig_notr_confusion_matrix_disease.pdf", plot=p1, width = 10, height = 10)
+
+
+```
+
+##.1 Koenig confusion matrix no tr per patient
+
+```{r}
+Seu_koenig <- readRDS("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/seu_nuclei_preprocessed.rds")
+
+#Load in Data frames + some adjustments
+test_labels <- read.csv(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/koenig_et_al_2022_koening_test_labels_binarized_MLP_Batch_10240_SEED_1234.csv", header = FALSE)
+test_labels <- data.frame(lapply(test_labels, as.numeric))
+colnames(test_labels) <- c('Human', 'Mice','Cardiomyocytes', 'Endothelial', 'Fibroblasts',
+                           'Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle','AS', 'HFpEF', 'HFrEF', 'CTRL')
+
+predicted_labels_si <- read.csv(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/koenig_et_al_2022_pred_results_MLP_batch_10240_SEED_1234.csv", header = FALSE)
+predicted_labels_si <- data.frame(lapply(predicted_labels_si, as.numeric))
+colnames(predicted_labels_si) <- c('Human', 'Mice','Cardiomyocytes', 'Endothelial', 'Fibroblasts',
+                                'Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle', 'AS', 'HFpEF', 'HFrEF', 'CTRL')
+
+
+for (biosample in unique(Seu_koenig$orig.ident)) {
+  positions <- which(Seu_koenig@meta.data$orig.ident == biosample)
+  test_labels_sub <- test_labels[positions, ]
+  predicted_labels_sub <- predicted_labels_si[positions,]
+  
+  test_labels_sub_dis <- test_labels_sub[,colnames(test_labels_sub) %in% c('AS', 'HFpEF', 'HFrEF', 'CTRL')]
+  predicted_labels_sub_dis <- predicted_labels_sub[,colnames(predicted_labels_sub) %in% c('AS', 'HFpEF', 'HFrEF', 'CTRL')]
+  
+  
+  # Create a vector of cell types
+  diseases <- colnames(test_labels_sub_dis) #"1 AS" "2 HFpEF"    "3 HFrEF"    "4 CTRL
+  
+  
+  # Create a new DataFrame with one column containing cell type numbers
+  new_data <- apply(test_labels_sub_dis, 1, function(row) {
+    disease_index <- which.max(row)
+    return(disease_index)
+  })
+  
+  new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+  
+  actual.df <- data.frame(disease_encoded = new_data)
+  
+  # Create a new DataFrame with one column containing cell type numbers
+  new_data <- apply(predicted_labels_sub_dis, 1, function(row) {
+    disease_index <- which.max(row)
+    return(disease_index)
+  })
+  
+  
+  new_data <- plyr::mapvalues(new_data, 
+                        from = c(1,2,3,4),
+                        to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+  
+  pred.df <- data.frame(disease_encoded = new_data)
+  
+  df_tibble <- tibble("target" = actual.df$disease_encoded,
+                    "prediction" = pred.df$disease_encoded) 
+  
+  conf_mat_dis <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+
+  font_settings <- list(
+    size = 7
+  )
+  
+  p1 <- plot_confusion_matrix(conf_mat_dis$`Confusion Matrix`[[1]],
+                        place_x_axis_above = FALSE,
+                        add_normalized = F,
+                        add_counts = F,
+                        add_arrows = TRUE,
+                        add_row_percentages = F,
+                        intensity_by = "log10 counts",
+                        intensity_lims = c(2,4),
+                        darkness = 0.9, 
+                        add_zero_shading = F,
+                        font_col_percentages = font_settings,
+                        arrow_size = 0.3)
+  p1
+  ggsave(paste0("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/cm/biosample/koenig_notr_confusion_matrix_disease_",biosample,".pdf"), plot=p1, width = 10, height = 10)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```
+
+
+#. scGPT confusion matrix plot
+
+```{r}
+#Load in Data frames + some adjustments
+test_labels <- read.csv(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/RUN1/AE_True_5000_2400_350_2200_5150_test_labels_binarized_MLP_795_230_105_Batch_10240_SEED_1234.csv", header = FALSE)
+test_labels <- data.frame(lapply(test_labels, as.numeric))
+colnames(test_labels) <- c('Human', 'Mice','Cardiomyocytes', 'Endothelial', 'Fibroblasts',
+                           'Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle','AS', 'HFpEF', 'HFrEF', 'CTRL')
+
+predicted_labels_si <- read.csv(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/RUN1/AE_True_5000_2400_350_2200_5150_pred_results_MLP_795_230_105_Batch_10240_SEED_1234.csv", header = FALSE)
+predicted_labels_si <- data.frame(lapply(predicted_labels_si, as.numeric))
+colnames(predicted_labels_si) <- c('Human', 'Mice','Cardiomyocytes', 'Endothelial', 'Fibroblasts',
+                                'Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle', 'AS', 'HFpEF', 'HFrEF', 'CTRL')
+
+
+```
+
+#. GSE120064 confusion matrix plot results
+```{r}
+#Load in Data frames + some adjustments
+test_labels <- read.csv(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/GSE120064/retrain/RUN1/AE_True_5000_2400_350_2200_5150_test_labels_binarized_MLP_795_230_105_Batch_10240_SEED_1234.csv", header = FALSE)
+test_labels <- data.frame(lapply(test_labels, as.numeric))
+colnames(test_labels) <- c('Cardiomyocytes', 'Endothelial', 'Fibroblasts',
+                           'Immune.cells','AS', 'CTRL')
+
+predicted_labels_si <- read.csv(file = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/GSE120064/retrain/RUN1/AE_True_5000_2400_350_2200_5150_pred_results_MLP_795_230_105_Batch_10240_SEED_1234.csv", header = FALSE)
+predicted_labels_si <- data.frame(lapply(predicted_labels_si, as.numeric))
+colnames(predicted_labels_si) <- c('Cardiomyocytes', 'Endothelial', 'Fibroblasts',
+                           'Immune.cells','AS', 'CTRL')
+
+
+#Now for cell type
+test_labels.celltype <- test_labels[,colnames(test_labels) %in% c('Cardiomyocytes', 'Endothelial', 'Fibroblasts','Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle')]
+predicted_labels_si.celltype <- predicted_labels_si[,colnames(predicted_labels_si) %in% c('Cardiomyocytes', 'Endothelial', 'Fibroblasts','Immune.cells', 'Neuro', 'Pericytes', 'Smooth.Muscle')]
+
+# Create a vector of cell types
+cell_types <- colnames(test_labels.celltype) #"1 Cardiomyocytes" "2 Endothelial"    "3 Fibroblasts"    "4 Immune.cells"   "5 Neuro"          "6 Pericytes"      "7 Smooth.Muscle" 
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.celltype, 1, function(row) {
+  cell_type_index <- which.max(row)
+  return(cell_type_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4,5,6,7),
+                      to = c("CM", "EC", "FB", "IC", "NC", "PC", "SMC"))
+
+actual.df <- data.frame(Cell_type_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels_si.celltype, 1, function(row) {
+  cell_type_index <- which.max(row)
+  return(cell_type_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4,5,6,7),
+                      to = c("CM", "EC", "FB", "IC", "NC", "PC", "SMC"))
+
+pred.df <- data.frame(Cell_type_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$Cell_type_encoded,
+                    "prediction" = pred.df$Cell_type_encoded) 
+
+
+
+conf_mat_cell <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_cell$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.1)
+
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/koenig_et_al_2022/retrain/RUN1/cm/koenig_Run1_confusion_matrix_celltype.pdf", plot=p1, width = 8, height = 8)
+
+
+#Now for Disease
+test_labels.disease <- test_labels[,colnames(test_labels) %in% c('AS', 'CTRL')]
+predicted_labels_si.disease <- predicted_labels_si[,colnames(predicted_labels_si) %in% c('AS','CTRL')]
+
+# Create a vector of cell types
+diseases <- colnames(test_labels.disease) #"1 AS" "2 HFpEF"    "3 HFrEF"    "4 CTRL
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.disease, 1, function(row) {
+  disease_index <- which.max(row)
+  return(disease_index)
+})
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+
+actual.df <- data.frame(disease_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels_si.disease, 1, function(row) {
+  disease_index <- which.max(row)
+  return(disease_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2,3,4),
+                      to = c("HP", "HFpEF", "HFrEF", "Healthy"))
+
+pred.df <- data.frame(disease_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$disease_encoded,
+                    "prediction" = pred.df$disease_encoded) 
+
+
+
+conf_mat_dis <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_dis$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.3)
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/confusion_matrix/XGBoost_Run3_LGR_confusion_matrix_disease.pdf", plot=p1, width = 10, height = 10)
+
+
+#Create three data frames (Species, Cell type, Disease), calculate identity score
+test_labels.species <- test_labels[,colnames(test_labels) %in% c("Human","Mice")]
+predicted_labels.species_LGR <- predicted_labels_si[,colnames(predicted_labels_si) %in% c("Human","Mice")]
+
+species <- colnames(test_labels.species) #"1 Human # 2 Mice
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(test_labels.species, 1, function(row) {
+  species_index <- which.max(row)
+  return(species_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2),
+                      to = c("Human", "Mouse"))
+
+actual.df <- data.frame(species_encoded = new_data)
+
+# Create a new DataFrame with one column containing cell type numbers
+new_data <- apply(predicted_labels.species_LGR, 1, function(row) {
+  species_index <- which.max(row)
+  return(species_index)
+})
+
+new_data <- plyr::mapvalues(new_data, 
+                      from = c(1,2),
+                      to = c("Human", "Mouse"))
+
+pred.df <- data.frame(species_encoded = new_data)
+
+df_tibble <- tibble("target" = actual.df$species_encoded,
+                    "prediction" = pred.df$species_encoded) 
+
+conf_mat_spec <- confusion_matrix(targets = df_tibble$target,
+                             predictions = df_tibble$prediction)
+
+font_settings <- list(
+  size = 7
+)
+
+p1 <- plot_confusion_matrix(conf_mat_spec$`Confusion Matrix`[[1]],
+                      place_x_axis_above = FALSE,
+                      add_normalized = F,
+                      add_counts = F,
+                      add_arrows = TRUE,
+                      add_row_percentages = F,
+                      intensity_by = "log10 counts",
+                      intensity_lims = c(2,4),
+                      darkness = 0.9, 
+                      add_zero_shading = F,
+                      font_col_percentages = font_settings,
+                      arrow_size = 0.4)
+p1
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250813_publicdata_analysis/confusion_matrix/XGBoost_Run3_LGR_confusion_matrix_species.pdf", plot=p1, width = 10, height = 10)
 ```
