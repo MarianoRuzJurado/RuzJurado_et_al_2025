@@ -1629,7 +1629,144 @@ p1
 ggsave(plot = p1, filename = "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250829_Fig2e/Barplot_LGR_NN_XGBoost_scGPT.pdf", width = 5, height = 3)
 ```
 
+#10. F1s DAEMLP XGB
 
+```{r}
+#values were calculated above in conf matrices
+f1_collector <- data.frame(NN=rep(NA,13),
+                           XGB=rep(NA,13),
+                           label=c("Human","Mice",
+                                   "CM","EC","FB","IC","NC","PC","SMC",
+                                   "AS","HFpEF","HFrEF","CTRL"))
+f1_collector$NN <- c(1.00,1.00,
+                     0.9834176, 0.9778835, 0.9600759, 0.9588289, 0.8703375, 0.9480579, 0.8771733,
+                     0.9603759, 0.9918251, 0.9522965, 0.9963756) 
+
+f1_collector$XGB <- c(1.00, 1.00,
+                     0.9746879, 0.9773054, 0.9552032, 0.9398496, 0.8824593, 0.9446785, 0.8789290,
+                     0.9379985 ,0.9906392, 0.9335625, 0.9937647) 
+
+f1_collector$group <- c(
+  rep("Species", 2),     # Human, Mice
+  rep("Cell type", 7),   # CM, EC, FB, IC, NC, PC, SMC
+  rep("Disease", 4)      # AS, HFpEF, HFrEF, CTRL
+)
+
+library(ggplot2)
+library(ggrepel)
+ggplot(f1_collector, aes(x = XGB, y = NN, label = label, color = group)) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey50") + # diagonal
+  geom_point(size = 3) +
+  geom_text_repel(aes(label = label), size = 3, color = "black", force = 0.5) +  # labels repel each other
+  coord_equal() +
+  labs(
+    x = "F1 (XGBoost)",
+    y = "F1 (DAE+MLP)",
+    color = "Group",
+    title = "Correlation of F1 scores between DAE+MLP and XGB"
+  ) +
+  scale_color_manual(values = c(
+    "Species" = DOtools:::umap_colors[2],
+    "Cell type" = DOtools:::umap_colors[1],
+    "Disease" = DOtools:::umap_colors[3]
+  ))+
+  DOtools:::theme_box()
+
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250909_CorrF1_XGB_DAEMLP/Corrplot_F1_DAEMLP_XGB.pdf", width = 5, height = 5)
+
+write.xlsx(f1_collector, "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250909_CorrF1_XGB_DAEMLP/F1_table_DAEMLP_XGB.xlsx")
+
+wilcox.test(f1_collector$NN,
+            f1_collector$XGB,
+            paired = T,
+            exact = F,
+            correct = F,
+            alternative = "greater")
+
+#adding values for LGR
+
+#setting everything below 0.5 to 0.5
+
+
+f1_collector$LGR <- c(0.9843519, 0.9620717,
+                     0.9486427, 0.9249653, 0.9078674, 0.7650933, 0.5, 0.8840672, 0.5 , #0.5 was 0
+                     0.5455561 ,0.9168182, 0.5, 0.8520738) #0.5 was 0.1730803
+
+library(ggplot2)
+library(ggrepel)
+ggplot(f1_collector, aes(x = LGR, y = NN, label = label, color = group)) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey50") + # diagonal
+  geom_point(size = 3) +
+  geom_text_repel(aes(label = label), size = 3, color = "black", force = 0.5) +  # labels repel each other
+  coord_equal() +
+  xlim(0.5, 1)+
+  ylim(0.5, 1)+
+  labs(
+    x = "F1 (DAE+LGR)",
+    y = "F1 (DAE+MLP)",
+    color = "Group",
+    title = "Correlation of F1 scores between DAE+MLP and DAE+LGR"
+  ) +
+  scale_color_manual(values = c(
+    "Species" = DOtools:::umap_colors[2],
+    "Cell type" = DOtools:::umap_colors[1],
+    "Disease" = DOtools:::umap_colors[3]
+  ))+
+  DOtools:::theme_box()
+
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250909_CorrF1_XGB_DAEMLP/Corrplot_F1_DAEMLP_DAELGR.pdf", width = 5, height = 5)
+
+wilcox.test(f1_collector$NN,
+            f1_collector$LGR,
+            paired = T,
+            exact = F,
+            correct = F,
+            alternative = "greater")
+
+
+
+#adding values for scGPT
+
+#setting everything below 0.5 to 0.5 just for plot dimensions
+
+
+f1_collector$emb_scGPT <- c(0.9851292, 0.9652799,
+                     0.9727493, 0.9589387, 0.9431048, 0.9134078, 0.8209459, 0.9255426, 0.8267246,
+                     0.6645247 ,0.4662384, 0.6293590, 0.9153377)
+
+library(ggplot2)
+library(ggrepel)
+ggplot(f1_collector, aes(x = emb_scGPT, y = NN, label = label, color = group)) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey50") + # diagonal
+  geom_point(size = 3) +
+  geom_text_repel(aes(label = label), size = 3, color = "black", force = 0.5) +  # labels repel each other
+  coord_equal() +
+  xlim(0.4, 1)+
+  ylim(0.4, 1)+
+  labs(
+    x = "F1 (emb_scGPT)",
+    y = "F1 (DAE+MLP)",
+    color = "Group",
+    title = "Correlation of F1 scores between DAE+MLP and scGPT"
+  ) +
+  scale_color_manual(values = c(
+    "Species" = DOtools:::umap_colors[2],
+    "Cell type" = DOtools:::umap_colors[1],
+    "Disease" = DOtools:::umap_colors[3]
+  ))+
+  DOtools:::theme_box()
+
+ggsave("/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250909_CorrF1_XGB_DAEMLP/Corrplot_F1_DAEMLP_embscGPT.pdf", width = 5, height = 5)
+
+wilcox.test(f1_collector$NN,
+            f1_collector$emb_scGPT,
+            paired = T,
+            exact = F,
+            correct = F,
+            alternative = "greater")
+
+write.xlsx(f1_collector, "/mnt/mariano/Sequencing_Storage/scStorage/Mariano/NN_Human_Mice/PaperExternRevision/250909_CorrF1_XGB_DAEMLP/F1_table_complete.xlsx")
+```
 
 #. Koenig confusion matrix plot no tr
 ```{r}
